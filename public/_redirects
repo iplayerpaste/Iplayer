@@ -1,0 +1,4 @@
+/api/* https://eplayer-api.YOUR_SUBDOMAIN.workers.dev/api/:splat 200
+/p/* /index.html 200
+/tag/* /index.html 200
+/admin /index.html 200
