@@ -48,3 +48,34 @@
 
 /* Sub to Unlock: hard-gated player */
 .locked-player-area.is-locked{min-height:230px;display:grid;place-items:center;padding:28px;background:linear-gradient(145deg,#f7f8ff,#eef2fb);border:1px solid #e4e9f4;border-radius:18px}.locked-player-placeholder{display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;color:#64718a}.locked-player-icon{width:58px;height:58px;display:grid;place-items:center;border-radius:18px;background:#e4e9ff;color:#5965d9;font-size:23px}.locked-player-placeholder strong{font:700 17px/1.3 "Space Grotesk",sans-serif;color:#27344d}.locked-player-placeholder span{font-size:12px;line-height:1.6}.unlock-completion{display:flex;align-items:center;gap:9px;margin-top:15px;padding:12px 14px;border-radius:12px;background:#f2f4ff;color:#4f5bc7;font-size:12px;font-weight:700}.unlock-completion i{font-size:15px}.video-gate-shell{display:block}
+
+/* Final video action hierarchy */
+.video-actions-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.video-actions-row .video-action-btn{min-width:0;width:100%;min-height:48px}
+.video-action-btn.like{background:#fff;border-color:#f0dce4;color:#c44d75}
+.video-action-btn.like b{font-size:10px;padding:3px 7px;border-radius:99px;background:#fff0f4;color:#c44d75}
+.video-action-btn.like.is-liked{background:#fff1f5;border-color:#f3c5d4}
+.unlock-task-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}
+.unlock-task-card{min-width:0;display:flex;align-items:center;gap:10px;padding:12px;border:1px solid #e6eaf2;border-radius:13px;background:#fff}
+.unlock-task-copy{min-width:0;flex:1}
+.unlock-task-action{margin-left:auto}
+.related-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.related-card{display:block;padding:10px;border-radius:15px}
+.related-thumb{width:100%;aspect-ratio:16/9;margin:0 0 10px}
+.related-copy h3{font-size:13px;line-height:1.45}
+@media(max-width:560px){
+ .video-actions-row{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+ .video-actions-row .video-action-btn{min-height:44px;gap:5px;padding:0 5px;font-size:10px}
+ .video-actions-row .video-action-btn i{font-size:12px}
+ .unlock-task-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .unlock-task-card{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:10px}
+ .unlock-platform-icon{width:32px;height:32px;flex-basis:32px}
+ .unlock-task-copy strong{font-size:10px;min-height:28px}
+ .unlock-task-action{width:100%;margin:0;padding:0;display:block}
+ .task-state{display:none}
+ .unlock-open-btn{width:100%;padding:9px 5px;font-size:9px}
+ .related-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .related-card{padding:8px}
+ .related-thumb{margin-bottom:8px}
+ .related-copy h3{font-size:11px}
+}
