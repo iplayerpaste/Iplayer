@@ -23,7 +23,9 @@ create table if not exists public.site_settings (
 insert into public.site_settings(key,value) values
  ('site_name','ePlayer'),
  ('telegram_url','https://t.me/iplayerch'),
- ('whatsapp_url','https://whatsapp.com/channel/0029Vb9Mk9PGZNCjff7KpY3F')
+ ('whatsapp_url','https://whatsapp.com/channel/0029Vb9Mk9PGZNCjff7KpY3F'),
+ ('facebook_url',''),
+ ('youtube_url','')
 on conflict (key) do nothing;
 
 create table if not exists public.admin_sessions (
@@ -43,7 +45,9 @@ create table if not exists public.admin_activity (
 create table if not exists public.ads (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  placement text not null check (placement in ('paste_top','paste_middle','paste_bottom','home','tag')),
+  placement text not null default 'site_all',
+  ad_type text not null default 'banner',
+  size text not null default 'responsive',
   script text not null,
   active boolean not null default true,
   created_at timestamptz not null default now()
@@ -57,3 +61,51 @@ alter table public.ads enable row level security;
 
 -- No public table policies are created. Access is performed by the Worker
 -- using the Supabase service role key, which must remain a Worker secret.
+
+
+-- Video widget content managed from the admin panel.
+create table if not exists public.videos (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  title text not null,
+  description text not null default '',
+  embed_url text not null,
+  thumbnail_url text not null default '',
+  orientation text not null default 'horizontal' check (orientation in ('horizontal','vertical')),
+  download_url text not null default '',
+  unlock_tasks jsonb not null default '[]'::jsonb,
+  published boolean not null default true,
+  views bigint not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists videos_published_created_idx on public.videos(created_at desc) where published=true;
+
+-- Broadcast announcements remain visible in the archive until admin deletes them.
+create table if not exists public.announcements (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  content text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+-- Anonymous presence heartbeat; records expire from online counts after 2 minutes.
+create table if not exists public.online_presence (
+  visitor_id text primary key,
+  last_seen timestamptz not null default now()
+);
+create index if not exists online_presence_last_seen_idx on public.online_presence(last_seen desc);
+
+alter table public.videos enable row level security;
+alter table public.announcements enable row level security;
+alter table public.online_presence enable row level security;
+
+-- Compatibility migration for projects where the original ads table already exists.
+alter table public.ads add column if not exists ad_type text not null default 'banner';
+alter table public.ads add column if not exists size text not null default 'responsive';
+alter table public.ads alter column placement drop default;
+do $$ begin
+  if exists (select 1 from pg_constraint where conname='ads_placement_check' and conrelid='public.ads'::regclass) then
+    alter table public.ads drop constraint ads_placement_check;
+  end if;
+end $$;
