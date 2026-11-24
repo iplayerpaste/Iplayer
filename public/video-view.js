@@ -33,11 +33,13 @@ function unlockStorageKey() {
   const signature = tasks.map(t => `${String(t.type||"")}:${String(t.url||"")}`).join("|");
   return `vidpas-unlock-${slug}-${encodeURIComponent(signature)}`;
 }
-function savedTasks() {
-  try { return JSON.parse(localStorage.getItem(unlockStorageKey()) || "{}") || {}; }
-  catch { return {}; }
+// Task progress is intentionally page-session-only. A full page refresh starts
+// Sub to Unlock from zero, while returning from an external app keeps in-memory state.
+function resetSavedTasksForPageLoad() {
+  saved = {};
+  try { localStorage.removeItem(unlockStorageKey()); } catch { /* Storage may be disabled. */ }
 }
-function storeTasks() { localStorage.setItem(unlockStorageKey(), JSON.stringify(saved)); }
+function storeTasks() { /* Keep progress in memory only; do not persist across refreshes. */ }
 function safeHttpUrl(value) {
   try { const u = new URL(value); return ["http:","https:"].includes(u.protocol) ? u.href : ""; }
   catch { return ""; }
@@ -84,7 +86,6 @@ function renderPlayer(data) {
   }
   const hint = $("downloadHint");
   if (hint) hint.textContent = data.download_url ? "Video sudah terbuka. Kamu bisa menonton dan mengunduh." : "Publisher belum menyediakan tautan download.";
-  startFloatingAdSchedule();
 }
 function renderLockedStage(data) {
   const stage = $("videoStage");
@@ -346,31 +347,47 @@ function setupPopunder() {
   (document.head || document.body).appendChild(script);
 }
 
+const AD_ENTRY_MOTIONS = ["ad-from-top", "ad-from-bottom", "ad-from-left", "ad-from-right", "ad-from-center"];
+const ROTATING_AD_BANNERS = [
+  {key:"140b515f1a8f1857a38ab603f51b1f10",width:320,height:50},
+  {key:"6e20a4c9dad189e23fe8642d6c242cfd",width:468,height:60},
+  {key:"100bd0c6cfd6cedb608b2e083620df0e",width:300,height:250},
+  {key:"ada5f60c5cb37f253657ef96c895a721",width:160,height:300}
+];
+let adMotionIndex = 0;
+function showSlideAd(panel) {
+  if (!panel) return;
+  panel.classList.remove("is-hiding", ...AD_ENTRY_MOTIONS);
+  const motion = AD_ENTRY_MOTIONS[adMotionIndex % AD_ENTRY_MOTIONS.length];
+  const banner = ROTATING_AD_BANNERS[adMotionIndex % ROTATING_AD_BANNERS.length];
+  adMotionIndex++;
+  panel.classList.add(motion);
+  // Rebuild the ad iframe for the next banner format, then restart the entry animation.
+  const slot = $("slideAdSlot");
+  if (slot) { slot.dataset.loaded = ""; slot.replaceChildren(); }
+  panel.hidden = true;
+  void panel.offsetWidth;
+  panel.hidden = false;
+  loadAdsterraBanner("slideAdSlot",banner.key,banner.width,banner.height,`https://biomanos.org/22/${banner.key}`);
+  window.clearTimeout(panel._hideTimer);
+  panel._hideTimer = window.setTimeout(() => {
+    panel.classList.add("is-hiding");
+    window.setTimeout(() => { panel.hidden = true; panel.classList.remove("is-hiding"); }, 360);
+  }, 15000);
+}
 function startSlideAd() {
   const panel = $("videoSlideAd");
   if (!panel || panel.dataset.started) return;
   panel.dataset.started = "1";
-  const show = () => {
-    panel.hidden = false;
-    loadAdsterraBanner("slideAdSlot","140b515f1a8f1857a38ab603f51b1f10",320,50,"https://biomanos.org/22/140b515f1a8f1857a38ab603f51b1f10");
+  const show = () => showSlideAd(panel);
+  window.setTimeout(show, 5000);
+  // 15 seconds visible, then a quiet gap; cycle through all five entry motions.
+  panel._cycleTimer = window.setInterval(() => { if (panel.hidden) show(); }, 45000);
+  $("hideSlideAd").onclick = () => {
+    window.clearTimeout(panel._hideTimer);
+    panel.classList.add("is-hiding");
+    window.setTimeout(() => { panel.hidden = true; panel.classList.remove("is-hiding"); }, 360);
   };
-  setTimeout(show,5000);
-  setInterval(() => { if (panel.hidden) show(); },45000);
-  $("hideSlideAd").onclick = () => { panel.classList.add("is-hiding"); setTimeout(() => { panel.hidden = true; panel.classList.remove("is-hiding");  },350); };
-}
-function startFloatingAdSchedule() {
-  const panel = $("videoFloatingAd");
-  if (!panel || panel.dataset.started) return;
-  panel.dataset.started = "1";
-  const show = () => {
-    if (!unlocked) return;
-    panel.hidden = false;
-    loadAdsterraBanner("floatingAdSlot","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd");
-    setTimeout(() => { panel.hidden = true; },15000);
-  };
-  setTimeout(show,5000);
-  setInterval(() => { if (panel.hidden) show(); },45000);
-  $("closeFloatingAd").onclick = () => { panel.hidden = true;  };
 }
 async function setupCommunityNotice() {
   let settings = {};
@@ -468,7 +485,7 @@ function buildUnlockedPage(data) {
 function buildPage(data) {
   videoData = data;
   tasks = Array.isArray(data.unlock_tasks) ? data.unlock_tasks.filter(t => t && safeHttpUrl(t.url)) : [];
-  saved = savedTasks();
+  resetSavedTasksForPageLoad();
   document.title = `${data.title} — Vidpas`;
   if (tasks.length) return buildLockedPage(data);
   buildUnlockedPage(data);
