@@ -1,4 +1,3 @@
-/api/* https://iplayer-5bh.pages.dev/api/:splat 200
 /p/* /index.html 200
 /tag/* /index.html 200
-/admin /index.html 200
+/admin /admin.html 200
