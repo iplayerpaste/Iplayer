@@ -14,9 +14,10 @@
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <header class="topbar">
-    <a class="brand" href="/"><span class="brand-mark">e</span><span>ePlayer</span></a>
-    <nav><a href="#recent">Explore</a><a id="telegramLink" href="https://t.me/iplayerch" target="_blank" rel="noopener">Telegram</a><a id="whatsappLink" href="https://whatsapp.com/channel/0029Vb9Mk9PGZNCjff7KpY3F" target="_blank" rel="noopener">WhatsApp</a></nav>
+    <a class="brand" href="/"><span class="brand-mark">e</span><span>Feedpass</span></a>
+    <nav><a href="#recent">Explore</a><a href="#videosSection">Video</a><a id="telegramLink" href="https://t.me/iplayerch" target="_blank" rel="noopener">Telegram</a><a id="whatsappLink" href="https://whatsapp.com/channel/0029Vb9Mk9PGZNCjff7KpY3F" target="_blank" rel="noopener">WhatsApp</a></nav>
   </header>
+  <div id="ad-navbar" class="ad-slot"></div>
   <main class="shell">
     <section class="hero">
       <div class="eyebrow"><span class="pulse"></span> SIMPLE. PRIVATE. SHAREABLE.</div>
@@ -24,6 +25,8 @@
       <p class="hero-copy">Simpan teks, bagikan dengan mudah, dan kendalikan siapa yang bisa mengaksesnya.</p>
     </section>
 
+    <section id="announcementBanner" class="announcement-banner hidden" aria-live="polite"></section>
+    <div id="ad-home" class="ad-slot"></div>
     <section class="composer panel">
       <div class="section-heading"><div><span class="eyebrow muted">CREATE SOMETHING</span><h2>Create a paste</h2></div><span class="secure-label">✦ Secure by design</span></div>
       <form id="createForm">
@@ -42,6 +45,12 @@
     </section>
 
     <section id="reader" class="panel reader hidden"></section>
+    <section id="videosSection" class="recent-section">
+      <div class="section-heading"><div><span class="eyebrow muted">VIDEO FEED</span><h2>Explore videos</h2></div><a class="button ghost" href="/v">Semua video ↗</a></div>
+      <div id="ad-explore_top" class="ad-slot"></div><div id="videoGrid" class="video-grid"><div class="empty-state">Memuat video…</div></div>
+      <div id="ad-explore_grid" class="ad-slot"></div>
+    </section>
+    <section id="announcementArchive" class="recent-section"><div class="section-heading"><h2>Pengumuman</h2></div><div id="announcementList" class="announcement-list"></div></section>
 
     <section id="recent" class="recent-section">
       <div class="section-heading"><div><span class="eyebrow muted">THE COMMUNITY</span><h2>Recent public pastes</h2></div><button id="refreshPastes" class="button ghost">Refresh ↻</button></div>
@@ -51,5 +60,5 @@
     <footer><span>© <span id="year"></span> ePlayer</span><span>Made for sharing, built for focus.</span></footer>
   </main>
   <dialog id="passwordDialog" class="dialog"><form method="dialog" id="passwordForm"><button class="dialog-close" value="cancel" aria-label="Tutup">×</button><div class="dialog-icon">🔐</div><h2>This paste is protected</h2><p>Masukkan password untuk melanjutkan.</p><input id="readerPassword" type="password" placeholder="Paste password" required><div id="passwordStatus" class="status"></div><button class="button primary full" value="default">Unlock paste</button></form></dialog>
-  <script src="/app.js" type="module"></script>
+  <dialog id="shareDialog" class="dialog"></dialog><script src="/app.js" type="module"></script>
 </body></html>
