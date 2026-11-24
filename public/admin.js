@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-async function call(path,opt={}){const r=await fetch(`/api${path}`,{credentials:"include",headers:{"Content-Type":"application/json"},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||"Request gagal");return d}
+async function call(path,opt={}){const r=await fetch(`/api${path}`,{credentials:"include",headers:{"Content-Type":"application/json"},...opt});const d=await r.json().catch(()=>({}));if(!r.ok){const detail=d.detail?` — ${d.detail}`:"";throw Error((d.error||"Request gagal")+detail)}return d}
 function msg(id,s,ok=false){$(id).textContent=s;$(id).className=`status ${ok?"success":"error"}`}
 function esc(s=""){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 const taskLabels={youtube:"Subscribe YouTube",facebook:"Ikuti / gabung Facebook",whatsapp:"Join saluran WhatsApp",telegram:"Join grup Telegram"};
