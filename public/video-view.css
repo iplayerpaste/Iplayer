@@ -124,3 +124,29 @@
 .community-notice.is-leaving{animation:vidpas-community-center-out .22s ease both}
 @keyframes vidpas-community-center-out{to{opacity:0;transform:translate(-50%,calc(-50% + 12px))}}
 @media(max-width:640px){.community-notice{top:50%;left:50%;right:auto;bottom:auto;width:calc(100vw - 32px)}.video-slide-ad,.video-floating-ad{max-width:calc(100vw - 8px)}.related-ad{padding:0 !important}}
+
+
+/* Sub-to-unlock refresh: full-width artwork, premium card, clear action order */
+.unlock-gate-backdrop{padding:clamp(14px,3vw,28px);background:linear-gradient(145deg,#f6f7ff,#f8fbff)}
+.unlock-gate-card{width:min(760px,100%);margin:0 auto;padding:clamp(16px,3vw,26px);border:1px solid #e7eaf5;border-radius:22px;background:#fff;box-shadow:0 18px 48px rgba(26,39,74,.10);color:#1c2942}
+.unlock-thumbnail-row{display:flex;flex-direction:column;gap:0;overflow:hidden;border:1px solid #e8ebf4;border-radius:16px;background:#fff}
+.unlock-thumbnail-row img,.unlock-thumbnail-fallback{display:block;width:100%;height:auto;aspect-ratio:16/9;flex:0 0 auto;object-fit:contain;background:#111827}
+.unlock-thumbnail-fallback{display:grid;place-items:center;color:#aeb7d0;font-size:36px}
+.unlock-thumbnail-caption{display:flex;flex-direction:column;gap:6px;padding:14px 16px}
+.unlock-thumbnail-caption strong{font:700 clamp(16px,2.4vw,21px)/1.3 "Space Grotesk",sans-serif;color:#1d2941}
+.unlock-thumbnail-caption small{color:#a04452;font-size:11px;font-weight:700}
+.unlock-premium-head{margin-top:20px}
+.unlock-premium-title>span{font-size:10px;letter-spacing:1.8px;font-weight:900;color:#6467db}
+.unlock-premium-title h2{margin:5px 0;color:#202b45;font:700 clamp(20px,3vw,26px)/1.2 "Space Grotesk",sans-serif}
+.unlock-premium-title p{margin:0;color:#748096;font-size:12px;line-height:1.6}
+.unlock-progress-track{height:8px;border-radius:99px;background:#edf0f7;overflow:hidden}
+.unlock-progress-track span{background:linear-gradient(90deg,#626be6,#9a65e8)}
+.unlock-task-card{border:1px solid #e7eaf3;border-radius:13px;background:#fbfcff}
+.unlock-open-btn{white-space:nowrap}
+.unlock-return-note{font-size:10px;line-height:1.6}
+.video-actions-panel{position:relative}
+.video-actions-panel .actions-hint{margin-bottom:0}
+@media(max-width:640px){.unlock-gate-backdrop{padding:12px 9px}.unlock-gate-card{padding:13px;border-radius:17px}.unlock-thumbnail-caption{padding:12px}.video-actions-panel{margin:0 12px 16px;padding:13px}.video-actions-row{gap:7px}.video-action-btn{font-size:10px}}
+
+.ad-300x250{width:min(300px,100%);min-height:250px}.ad-728x90{width:min(728px,100%);min-height:90px}
+.related-ad-square,.related-ad-leaderboard{grid-column:1/-1}

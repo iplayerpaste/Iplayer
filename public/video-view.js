@@ -13,6 +13,7 @@ const platforms = {
 const DEFAULT_TELEGRAM = "https://t.me/vidpas";
 const DEFAULT_WHATSAPP = "https://whatsapp.com/channel/0029VbEU8HWIt5rxVZ1eFg3c";
 let videoData = null, tasks = [], unlocked = false, saved = {}, adBannerQueue = Promise.resolve();
+const pageEnteredAt = Date.now();
 
 async function api(path, options = {}) {
   const r = await fetch(`/api${path}`, {
@@ -67,8 +68,9 @@ function lockedMarkup() {
   const thumb = safeHttpUrl(videoData.thumbnail_url);
   return `<div class="unlock-gate-backdrop">
     <div class="unlock-gate-card">
-      <div class="unlock-thumbnail-row">${thumb ? `<img src="${esc(thumb)}" alt="Thumbnail ${esc(videoData.title)}">` : `<div class="unlock-thumbnail-fallback"><i class="fa-solid fa-photo-film"></i></div>`}
-        <div><span class="unlock-thumbnail-kicker">VIDPAS • VIDEO ACCESS</span><strong>${esc(videoData.title)}</strong><small><i class="fa-solid fa-lock"></i> Video terkunci</small></div>
+      <div class="unlock-thumbnail-row">
+        ${thumb ? `<img src="${esc(thumb)}" alt="Thumbnail ${esc(videoData.title)}">` : `<div class="unlock-thumbnail-fallback"><i class="fa-solid fa-photo-film"></i></div>`}
+        <div class="unlock-thumbnail-caption"><span class="unlock-thumbnail-kicker">VIDPAS • VIDEO ACCESS</span><strong>${esc(videoData.title)}</strong><small><i class="fa-solid fa-lock"></i> Akses terkunci</small></div>
       </div>
       <div class="unlock-premium-head"><div class="unlock-premium-icon"><i class="fa-solid fa-unlock-keyhole"></i></div>
         <div class="unlock-premium-title"><span>SUB TO UNLOCK</span><h2>Buka akses menonton</h2><p>Gabung melalui tautan resmi berikut untuk melanjutkan.</p></div>
@@ -81,12 +83,12 @@ function lockedMarkup() {
           const complete = !!saved[i];
           return `<article class="unlock-task-card ${complete?"is-complete":""}" id="unlockTask${i}">
             <div class="unlock-platform-icon ${p.tone}"><i class="${p.icon}"></i></div>
-            <div class="unlock-task-copy"><strong>${esc(t.label || `Gabung ${p.name}`)}</strong><small>${complete?"Kunjungan selesai":"Buka tautan tujuan"}</small></div>
+            <div class="unlock-task-copy"><strong>${esc(t.label || `Gabung ${p.name}`)}</strong><small>${complete?"Tautan dibuka":"Buka tautan tujuan"}</small></div>
             <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">${complete?'<i class="fa-solid fa-check"></i> Selesai':`Gabung <i class="fa-solid fa-arrow-up-right-from-square"></i>`}</a>
           </article>`;
         }).join("")}
       </div>
-      <p class="unlock-return-note"><i class="fa-solid fa-circle-info"></i> Setelah membuka tautan, kembali ke tab Vidpas. Progress akan diperbarui otomatis.</p>
+      <p class="unlock-return-note"><i class="fa-solid fa-circle-info"></i> Buka tautan resmi, lalu kembali ke Vidpas. Progress mencatat tautan yang dibuka, bukan memverifikasi status berlangganan.</p>
       <button id="continueWatchBtn" class="unlock-watch-btn" type="button" disabled><i class="fa-solid fa-lock"></i> Lanjutkan menonton</button>
       <div id="unlockCountdown" class="unlock-countdown" hidden aria-live="polite"><div class="unlock-countdown-ring"><span id="unlockCountdownNumber">3</span></div><strong>Memverifikasi akses</strong><div class="unlock-countdown-track"><span id="unlockCountdownBar"></span></div><small>Menyiapkan video untuk diputar…</small></div>
     </div>
@@ -106,7 +108,7 @@ function refreshTaskProgress() {
     const a = card.querySelector("a");
     const small = card.querySelector("small");
     if (a && saved[i]) { a.classList.add("is-complete"); a.innerHTML = '<i class="fa-solid fa-check"></i> Selesai'; }
-    if (small) small.textContent = saved[i] ? "Kunjungan selesai" : "Buka tautan tujuan";
+    if (small) small.textContent = saved[i] ? "Tautan dibuka" : "Buka tautan tujuan";
   });
   const btn = $("continueWatchBtn");
   if (btn) {
@@ -247,15 +249,25 @@ function renderRelated() {
     const first = items.slice(0,2).map(card).join("");
     const middle = items.slice(2,6).map(card).join("");
     const last = items.slice(6,10).map(card).join("");
-    grid.innerHTML = `${first}<div class="related-ad related-ad-tall"><div id="relatedBanner160" class="ad-slot ad-160x600"></div></div>${middle}<div class="related-ad related-ad-native"><div id="relatedNativeAd" class="ad-slot"></div></div>${last}<div class="related-ad related-ad-bottom"><div id="relatedBanner468" class="ad-slot ad-468x60"></div></div>`;
-    loadAdsterraBanner("relatedBanner160","1057b25ea9554d63c48eb6f8a07b782b",160,600,"https://biomanos.org/22/1057b25ea9554d63c48eb6f8a07b782b");
-    loadNativeAd("relatedNativeAd");
-    loadAdsterraBanner("relatedBanner468","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd");
+    grid.innerHTML = `${first}<div class="related-ad related-ad-tall"><div id="relatedBanner160" class="ad-slot ad-160x600"></div></div>${middle}<div class="related-ad related-ad-native"><div id="relatedNativeAd" class="ad-slot"></div></div><div class="related-ad related-ad-square"><div id="relatedBanner300" class="ad-slot ad-300x250"></div></div>${last}<div class="related-ad related-ad-bottom"><div id="relatedBanner468" class="ad-slot ad-468x60"></div></div><div class="related-ad related-ad-leaderboard"><div id="relatedBanner728" class="ad-slot ad-728x90"></div></div>`;
+    // Queue display units five seconds apart instead of stacking all placements at once.
+    queueAd(() => loadAdsterraBanner("relatedBanner160","1057b25ea9554d63c48eb6f8a07b782b",160,600,"https://biomanos.org/22/1057b25ea9554d63c48eb6f8a07b782b"));
+    queueAd(() => loadNativeAd("relatedNativeAd"));
+    queueAd(() => loadAdsterraBanner("relatedBanner300","100bd0c6cfd6cedb608b2e083620df0e",300,250,"https://biomanos.org/22/100bd0c6cfd6cedb608b2e083620df0e"));
+    queueAd(() => loadAdsterraBanner("relatedBanner468","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd"));
+    queueAd(() => loadAdsterraBanner("relatedBanner728","a0c724147631738be4791be58f8fbaed",728,90,"https://biomanos.org/22/a0c724147631738be4791be58f8fbaed"));
   }).catch(e => { console.warn("Related videos:",e); grid.classList.add("hidden"); empty.classList.remove("hidden"); });
 }
 
 /* Adsterra display placements. Popunder is intentionally not auto-triggered on every
    task click or timer: repeated forced popups can create invalid/accidental ad traffic. */
+function queueAd(callback) {
+  adBannerQueue = adBannerQueue.then(() => new Promise(resolve => {
+    callback();
+    setTimeout(resolve, 5000);
+  })).catch(error => console.warn("Ad queue:", error));
+  return adBannerQueue;
+}
 function loadAdsterraBanner(slotId,key,width,height,src) {
   const slot = $(slotId);
   if (!slot || slot.dataset.loaded) return;
@@ -298,6 +310,11 @@ function loadSocialBar() {
 // Load the popunder provider once at page start. The provider controls its own
 // genuine user-gesture rules; Vidpas does not synthesize clicks or force repeats.
 function setupPopunder() {
+  // Frequency cap: do not reload the popunder on every refresh or navigation.
+  try {
+    if (sessionStorage.getItem("vidpas-popunder-loaded") === "1") return;
+    sessionStorage.setItem("vidpas-popunder-loaded", "1");
+  } catch { /* Continue with provider's own frequency controls if storage is unavailable. */ }
   if (document.querySelector('script[data-vidpas-popunder]')) return;
   const script = document.createElement("script");
   script.setAttribute("data-cfasync", "false");
@@ -316,8 +333,8 @@ function startSlideAd() {
     panel.hidden = false;
     loadAdsterraBanner("slideAdSlot","140b515f1a8f1857a38ab603f51b1f10",320,50,"https://biomanos.org/22/140b515f1a8f1857a38ab603f51b1f10");
   };
-  setTimeout(show,10000);
-  setInterval(() => { if (panel.hidden) show(); },40000);
+  setTimeout(show,5000);
+  setInterval(() => { if (panel.hidden) show(); },45000);
   $("hideSlideAd").onclick = () => { panel.classList.add("is-hiding"); setTimeout(() => { panel.hidden = true; panel.classList.remove("is-hiding");  },350); };
 }
 function startFloatingAdSchedule() {
@@ -330,7 +347,7 @@ function startFloatingAdSchedule() {
     loadAdsterraBanner("floatingAdSlot","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd");
     setTimeout(() => { panel.hidden = true; },15000);
   };
-  setTimeout(show,15000);
+  setTimeout(show,5000);
   setInterval(() => { if (panel.hidden) show(); },45000);
   $("closeFloatingAd").onclick = () => { panel.hidden = true;  };
 }
@@ -395,13 +412,13 @@ function buildPage(data) {
   saved = savedTasks();
   document.title = `${data.title} — Vidpas`;
   root.innerHTML = `<section class="video-gate-shell">
-    <div id="lockedPlayerArea" class="locked-player-area ${tasks.length?"is-locked":""}"></div>
     <section class="video-info"><div class="video-info-main"><div class="video-label"><i class="fa-solid fa-film"></i> VIDEO PUBLISHER</div><h1>${esc(data.title)}</h1><p class="video-description">${esc(data.description || "Belum ada deskripsi untuk video ini.")}</p><div class="video-metrics"><span><i class="fa-regular fa-eye"></i><b>${Number(data.views||0).toLocaleString("id-ID")}</b> views</span><span><i class="fa-solid fa-heart"></i><b>${Number(data.likes||0).toLocaleString("id-ID")}</b> likes</span><span><i class="fa-solid fa-calendar-days"></i>${data.created_at?new Date(data.created_at).toLocaleDateString("id-ID"):"Vidpas"}</span></div></div></section>
-    <section class="video-actions-panel hidden" id="videoActions"><div class="video-actions-row">
+    <section class="video-actions-panel" id="videoActions"><div class="video-actions-row">
       <button class="video-action-btn like" id="likeBtn" type="button"><i class="fa-regular fa-heart"></i><span>Like</span><b id="likeCount">${Number(data.likes||0).toLocaleString("id-ID")}</b></button>
       <button class="video-action-btn download" id="downloadBtn" type="button" disabled><i class="fa-solid fa-download"></i><span>Download</span></button>
       <button class="video-action-btn" id="shareBtn" type="button"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
-    </div><p class="actions-hint" id="downloadHint"></p></section>
+    </div><p class="actions-hint" id="downloadHint">${tasks.length ? "Buka tautan tugas di bawah untuk membuka akses menonton." : "Menyiapkan video…"}</p></section>
+    <div id="lockedPlayerArea" class="locked-player-area ${tasks.length?"is-locked":""}"></div>
   </section>`;
   if (tasks.length) mountUnlockGate();
   else {
@@ -415,9 +432,12 @@ function buildPage(data) {
   try {
     loadSocialBar();
     startSlideAd();
+    setupPopunder();
     setupCommunityNotice();
     const d = await api(`/videos/${encodeURIComponent(slug)}`);
     if (!d || !d.title) throw Error("Video tidak ditemukan.");
+    const remaining = Math.max(0, 3000 - (Date.now() - pageEnteredAt));
+    if (remaining) await new Promise(resolve => setTimeout(resolve, remaining));
     buildPage(d);
   } catch(e) {
     root.innerHTML = `<div class="video-error"><div><i class="fa-solid fa-triangle-exclamation"></i></div><h2>Video tidak dapat dimuat</h2><p>${esc(e.message)}</p><a href="/videos" class="video-error-link"><i class="fa-solid fa-arrow-left"></i> Kunjungi semua video</a></div>`;
