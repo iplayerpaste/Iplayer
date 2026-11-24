@@ -21,8 +21,8 @@ async function settings(env){const rows=await db(env,"site_settings?select=key,v
 async function log(env,action,detail={}){try{await db(env,"admin_activity",{method:"POST",body:JSON.stringify({action,detail})})}catch{}}
 async function route(req,env,url){
  const p=url.pathname.replace(/^\/api/,"").replace(/\/$/,"")||"/",m=req.method;
- if(p==="/health")return json({ok:true,service:"ePlayer API"});
- if(p==="/settings"&&m==="GET"){const s=await settings(env);return json({site_name:s.site_name||"ePlayer",telegram_url:s.telegram_url||"",whatsapp_url:s.whatsapp_url||"",facebook_url:s.facebook_url||"",youtube_url:s.youtube_url||""})}
+ if(p==="/health")return json({ok:true,service:"Vidpas API"});
+ if(p==="/settings"&&m==="GET"){const s=await settings(env);return json({site_name:s.site_name||"Vidpas",telegram_url:s.telegram_url||"",whatsapp_url:s.whatsapp_url||"",facebook_url:s.facebook_url||"",youtube_url:s.youtube_url||""})}
  if(p==="/pastes"&&m==="POST"){
   const b=await body(req);if(typeof b.content!=="string"||!b.content.trim()||b.content.length>100000)return err("Isi paste wajib diisi (maksimal 100 KB).");
   const slug=random(9),salt=random(16),password_hash=b.password?`${salt}:${await hashPassword(b.password,salt)}`:null;
@@ -43,18 +43,33 @@ async function route(req,env,url){
  const access=p.match(/^\/pastes\/([^/]+)\/access$/);
  if(access&&m==="POST"){const b=await body(req),rows=await db(env,`pastes?slug=eq.${encodeURIComponent(access[1])}&select=*`);if(!rows.length)return err("Paste tidak ditemukan.",404);const x=rows[0];if(x.visibility!=="public")return err("Paste tidak ditemukan.",404);if(x.expires_at&&new Date(x.expires_at)<new Date())return err("Paste sudah kedaluwarsa.",410);if(x.password_hash){const [salt,expected]=x.password_hash.split(":");if(!b.password||await hashPassword(b.password,salt)!==expected)return err("Password salah.",401)}await db(env,`pastes?slug=eq.${encodeURIComponent(x.slug)}`,{method:"PATCH",body:JSON.stringify({views:(x.views||0)+1})});return json({title:x.title,content:x.content,created_at:x.created_at,views:(x.views||0)+1})}
 
+ if(p==="/posters"&&m==="POST"){
+  const b=await body(req);if(!b.title||!b.image_url||!b.target_url)return err("Judul, URL gambar, dan link tujuan wajib diisi.");
+  let image,target;try{image=new URL(b.image_url);target=new URL(b.target_url)}catch{return err("URL gambar atau link tujuan tidak valid.")};if(!["https:","http:"].includes(image.protocol)||!["https:","http:"].includes(target.protocol))return err("URL harus menggunakan HTTP atau HTTPS.");
+  const slug=random(9);const rows=await db(env,"posters",{method:"POST",body:JSON.stringify({slug,title:String(b.title).slice(0,140),description:String(b.description||"").slice(0,2000),image_url:image.href,target_url:target.href,author:String(b.author||"Komunitas").slice(0,60),published:true,views:0})});return json({item:rows[0],slug,url:`${env.SITE_ORIGIN||url.origin}/poster/${slug}`},201);
+ }
+ if(p==="/posters"&&m==="GET"){
+  const limit=Math.min(20,Math.max(1,Number(url.searchParams.get("limit"))||20)),offset=Math.max(0,Number(url.searchParams.get("offset"))||0);
+  const rows=await db(env,`posters?published=eq.true&select=slug,title,description,image_url,author,views,created_at&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
+  const totalRows=await db(env,"posters?published=eq.true&select=id");return json({items:rows.slice(0,limit),total:totalRows.length,has_more:rows.length>limit});
+ }
+ const posterMatch=p.match(/^\/posters\/([a-zA-Z0-9_-]+)$/);
+ if(posterMatch&&m==="GET") {const rows=await db(env,`posters?slug=eq.${encodeURIComponent(posterMatch[1])}&published=eq.true&select=slug,title,description,image_url,target_url,author,views,created_at`);if(!rows.length)return err("Poster tidak ditemukan.",404);const x=rows[0];await db(env,`posters?slug=eq.${encodeURIComponent(x.slug)}`,{method:"PATCH",body:JSON.stringify({views:(x.views||0)+1})});return json({...x,views:(x.views||0)+1});}
  if(p==="/videos"&&m==="GET"){
   const limit=Math.min(20,Math.max(1,Number(url.searchParams.get("limit"))||20)); const offset=Math.max(0,Number(url.searchParams.get("offset"))||0);
-  const rows=await db(env,`videos?published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,created_at&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
-  return json({items:rows.slice(0,limit),has_more:rows.length>limit});
+  const rows=await db(env,`videos?published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,downloads,shares,likes,created_at&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
+  const totalRows=await db(env,"videos?published=eq.true&select=id");return json({items:rows.slice(0,limit),total:totalRows.length,has_more:rows.length>limit});
  }
  const videoMatch=p.match(/^\/videos\/([a-zA-Z0-9_-]+)$/);
  if(videoMatch&&m==="GET"){
-  const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoMatch[1])}&published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,created_at`);
+  const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoMatch[1])}&published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,downloads,shares,likes,created_at`);
   if(!rows.length)return err("Video tidak ditemukan.",404);
   const x=rows[0]; await db(env,`videos?slug=eq.${encodeURIComponent(x.slug)}`,{method:"PATCH",body:JSON.stringify({views:(x.views||0)+1})});
   return json({...x,views:(x.views||0)+1});
  }
+ const videoAction=p.match(/^\/videos\/([a-zA-Z0-9_-]+)\/action$/);
+ if(videoAction&&m==="POST"){const b=await body(req),field={download:"downloads",share:"shares",like:"likes"}[b.action];if(!field)return err("Aksi tidak valid.");const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoAction[1])}&published=eq.true&select=id,${field}`);if(!rows.length)return err("Video tidak ditemukan.",404);const value=(rows[0][field]||0)+1;await db(env,`videos?id=eq.${rows[0].id}`,{method:"PATCH",body:JSON.stringify({[field]:value})});return json({[field]:value});}
+
  if(p==="/announcements"&&m==="GET"){
   const rows=await db(env,"announcements?active=eq.true&select=id,title,content,created_at&order=created_at.desc&limit=50"); return json({items:rows});
  }
@@ -69,7 +84,7 @@ async function route(req,env,url){
  if(p==="/admin/login"&&m==="POST"){const b=await body(req);if(!env.ADMIN_PASSWORD_HASH||!env.SESSION_SECRET)return err("Rahasia admin belum dikonfigurasi.",503);const [salt,expected]=env.ADMIN_PASSWORD_HASH.split(":");if(!salt||!expected||await hashPassword(String(b.password||""),salt)!==expected)return err("Password admin salah.",401);const id=random(24),sig=await hmac(env.SESSION_SECRET,id);await db(env,"admin_sessions",{method:"POST",body:JSON.stringify({id,expires_at:new Date(Date.now()+8*3600e3).toISOString()})});await log(env,"admin_login");return json({ok:true},200,{"Set-Cookie":cookie("ep_session",`${id}.${sig}`,28800)})}
  if(p==="/admin/logout"&&m==="POST"){if(await session(req,env)){const token=getCookie(req,"ep_session"),id=token?.split(".")[0];if(id)await db(env,`admin_sessions?id=eq.${encodeURIComponent(id)}`,{method:"DELETE"})}return json({ok:true},200,{"Set-Cookie":cookie("ep_session","",0)})}
  if(p.startsWith("/admin/")){if(!await requireAdmin(req,env))return err("Akses admin diperlukan.",401);
-  if(p==="/admin/dashboard"&&m==="GET"){const rows=await db(env,"pastes?select=visibility,views,expires_at");const videos=await db(env,"videos?select=id,views");const online=await db(env,`online_presence?last_seen=gt.${encodeURIComponent(new Date(Date.now()-120000).toISOString())}&select=visitor_id`);return json({total_pastes:rows.length,public_pastes:rows.filter(x=>x.visibility==="public").length,total_views:rows.reduce((a,x)=>a+(x.views||0),0),total_videos:videos.length,video_views:videos.reduce((a,x)=>a+(x.views||0),0),online_now:online.length})}
+  if(p==="/admin/dashboard"&&m==="GET"){const rows=await db(env,"pastes?select=visibility,views,expires_at");const videos=await db(env,"videos?select=id,views,downloads,shares,likes");const posters=await db(env,"posters?select=id,views");const online=await db(env,`online_presence?last_seen=gt.${encodeURIComponent(new Date(Date.now()-120000).toISOString())}&select=visitor_id`);return json({total_pastes:rows.length,public_pastes:rows.filter(x=>x.visibility==="public").length,total_views:rows.reduce((a,x)=>a+(x.views||0),0),total_videos:videos.length,video_views:videos.reduce((a,x)=>a+(x.views||0),0),video_downloads:videos.reduce((a,x)=>a+(x.downloads||0),0),video_shares:videos.reduce((a,x)=>a+(x.shares||0),0),video_likes:videos.reduce((a,x)=>a+(x.likes||0),0),total_posters:posters.length,poster_views:posters.reduce((a,x)=>a+(x.views||0),0),online_now:online.length})}
   if(p==="/admin/settings"&&m==="GET")return json(await settings(env));
   if(p==="/admin/settings"&&m==="PUT"){const b=await body(req);for(const [key,value] of Object.entries({telegram_url:b.telegram_url,whatsapp_url:b.whatsapp_url,facebook_url:b.facebook_url,youtube_url:b.youtube_url,site_name:b.site_name})){if(value!==undefined)await db(env,"site_settings?on_conflict=key",{method:"POST",prefer:"resolution=merge-duplicates,return=representation",body:JSON.stringify({key,value})})}await log(env,"settings_updated");return json({ok:true})}
   if(p==="/admin/ads"&&m==="GET")return json({items:await db(env,"ads?select=id,name,placement,ad_type,size,active,created_at&order=created_at.desc")});
@@ -86,6 +101,10 @@ async function route(req,env,url){
   const vm=p.match(/^\/admin\/videos\/([0-9a-f-]+)$/);
   if(vm&&m==="PATCH"){const b=await body(req);const patch={};for(const k of ["title","description","embed_url","thumbnail_url","orientation","download_url","unlock_tasks","published"])if(b[k]!==undefined)patch[k]=b[k];await db(env,`videos?id=eq.${vm[1]}`,{method:"PATCH",body:JSON.stringify(patch)});return json({ok:true})}
   if(vm&&m==="DELETE"){await db(env,`videos?id=eq.${vm[1]}`,{method:"DELETE"});return json({ok:true})}
+  if(p==="/admin/posters"&&m==="GET")return json({items:await db(env,"posters?select=*&order=created_at.desc")});
+  const pm=p.match(/^\/admin\/posters\/([0-9a-f-]+)$/);
+  if(pm&&m==="PATCH"){const b=await body(req);await db(env,`posters?id=eq.${pm[1]}`,{method:"PATCH",body:JSON.stringify({published:!!b.published})});return json({ok:true});}
+  if(pm&&m==="DELETE"){await db(env,`posters?id=eq.${pm[1]}`,{method:"DELETE"});return json({ok:true});}
   if(p==="/admin/announcements"&&m==="GET")return json({items:await db(env,"announcements?select=*&order=created_at.desc")});
   if(p==="/admin/announcements"&&m==="POST"){const b=await body(req);if(!b.title||!b.content)return err("Judul dan isi pengumuman wajib diisi.");const rows=await db(env,"announcements",{method:"POST",body:JSON.stringify({title:String(b.title).slice(0,160),content:String(b.content).slice(0,10000),active:true})});await log(env,"announcement_created");return json({item:rows[0]},201)}
   const am=p.match(/^\/admin\/announcements\/([0-9a-f-]+)$/);if(am&&m==="DELETE"){await db(env,`announcements?id=eq.${am[1]}`,{method:"DELETE"});return json({ok:true})}
