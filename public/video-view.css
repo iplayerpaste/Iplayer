@@ -223,3 +223,10 @@
 @media(max-width:560px){.unlock-first-view{padding:16px 13px;gap:13px}.unlock-first-thumbnail{border-radius:10px}.unlock-first-status strong{font-size:15px}.video-publisher-heading{padding:18px 15px 0}.video-social-shortcuts{padding:0 14px 14px;gap:7px}.video-social-button{min-height:35px;padding:7px 10px;font-size:10px}.video-gate-shell>.video-page-ad{padding-left:12px;padding-right:12px}.video-gate-shell>.video-stage-wrap{margin:0 12px}}
 .related-ad-bottom{grid-column:1/-1;display:flex;justify-content:center;align-items:center;min-width:0;overflow:hidden;padding:10px 0}
 .related-ad-bottom .ad-slot{width:min(468px,100%);min-height:60px}
+
+
+/* Larger, easier-to-tap Sub to Unlock task buttons on phones */
+.unlock-open-btn{min-height:48px;padding:0 16px;gap:9px;border-radius:11px;font-size:12px;font-weight:800}
+.unlock-open-btn i{font-size:16px}
+.unlock-task-list-simple .unlock-task-simple{gap:7px}
+@media(max-width:560px){.unlock-open-btn{min-height:50px;padding:0 12px;font-size:12px;gap:8px}.unlock-open-btn i{font-size:17px}.unlock-task-list-simple{gap:10px}.unlock-task-list-simple .unlock-task-simple{gap:6px}}

@@ -42,6 +42,27 @@ function safeHttpUrl(value) {
   try { const u = new URL(value); return ["http:","https:"].includes(u.protocol) ? u.href : ""; }
   catch { return ""; }
 }
+
+// Prefer the installed Android app for social destinations. Chrome/Android resolves
+// the package intent; if the app is missing, Android opens the original HTTPS URL.
+const ANDROID_APP_PACKAGES = {
+  telegram:"org.telegram.messenger",
+  whatsapp:"com.whatsapp",
+  facebook:"com.facebook.katana",
+  youtube:"com.google.android.youtube"
+};
+function platformAppHref(type, value) {
+  const url = safeHttpUrl(value);
+  if (!url) return "#";
+  if (!/Android/i.test(navigator.userAgent || "")) return url;
+  const packageName = ANDROID_APP_PACKAGES[String(type || "").toLowerCase()];
+  if (!packageName) return url;
+  try {
+    const u = new URL(url);
+    const fallback = encodeURIComponent(url);
+    return `intent://${u.host}${u.pathname}${u.search}${u.hash}#Intent;scheme=${u.protocol.slice(0,-1)};package=${packageName};S.browser_fallback_url=${fallback};end`;
+  } catch { return url; }
+}
 function renderPlayer(data) {
   const src = normalizeVideoSource(data.embed_url);
   if (!src) throw Error("URL video tidak valid atau format penyedia belum didukung.");
@@ -84,7 +105,7 @@ function lockedMarkup() {
         const complete = !!saved[i];
         const label = t.label || (String(t.type).toLowerCase()==="telegram" ? "Join Telegram" : String(t.type).toLowerCase()==="whatsapp" ? "Gabung Saluran WhatsApp" : `Gabung ${p.name}`);
         return `<article class="unlock-task-simple ${complete?"is-complete":""}" id="unlockTask${i}">
-          <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer"><i class="${p.icon}"></i><span>${esc(complete?"Selesai":label)}</span>${complete?'<i class="fa-solid fa-check"></i>':'<i class="fa-solid fa-arrow-up-right-from-square"></i>'}</a>
+          <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(platformAppHref(t.type,t.url))}" rel="noopener noreferrer"><i class="${p.icon}"></i><span>${esc(complete?"Selesai":label)}</span>${complete?'<i class="fa-solid fa-check"></i>':'<i class="fa-solid fa-arrow-up-right-from-square"></i>'}</a>
           <small>${complete?"Tautan dibuka":"Tekan tombol untuk bergabung"}</small>
         </article>`;
       }).join("")}
@@ -432,7 +453,7 @@ function buildUnlockedPage(data) {
       <button class="video-action-btn download" id="downloadBtn" type="button" disabled><i class="fa-solid fa-download"></i><span>Download tidak tersedia</span></button>
       <button class="video-action-btn" id="shareBtn" type="button"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
     </div><p class="actions-hint" id="downloadHint">${data.download_url ? "Video sudah terbuka. Kamu bisa menonton dan mengunduh." : "Publisher belum menyediakan tautan download."}</p></section>
-    <div class="video-social-shortcuts">${tasks.map(t=>{const p=platforms[String(t.type||"").toLowerCase()]||{name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square",tone:"generic"};return `<a class="video-social-button ${p.tone}" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(p.name)}"><i class="${p.icon}"></i><span>${esc(p.name)}</span></a>`;}).join("")}</div>
+    <div class="video-social-shortcuts">${tasks.map(t=>{const p=platforms[String(t.type||"").toLowerCase()]||{name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square",tone:"generic"};return `<a class="video-social-button ${p.tone}" href="${esc(platformAppHref(t.type,t.url))}" rel="noopener noreferrer" aria-label="${esc(p.name)}"><i class="${p.icon}"></i><span>${esc(p.name)}</span></a>`;}).join("")}</div>
     <div class="video-page-ad video-unlock-ad"><div class="ad-caption">Advertisement</div><div id="unlockBannerSlot" class="ad-slot ad-300x250"></div></div>
   </section>`;
   const related = $("relatedSection");
