@@ -9,14 +9,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer"><link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/paste.css">
-</head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"></head>
 <body>
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <header class="topbar">
     <a class="brand" href="/"><span class="brand-mark">V</span><span>Vidpas</span></a>
-    <nav><a href="/"><i class="fa-solid fa-house" aria-hidden="true"></i> Beranda</a><a href="/create-paste"><i class="fa-regular fa-clipboard" aria-hidden="true"></i> Paste Link</a><a href="#recent"><i class="fa-solid fa-book-open" aria-hidden="true"></i> Explore Paste</a><a href="/posters"><i class="fa-regular fa-images" aria-hidden="true"></i> Poster Link</a><a href="/videos"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Video</a><a id="telegramLink" href="https://t.me/iplayerch" target="_blank" rel="noopener"><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram</a><a id="whatsappLink" href="https://whatsapp.com/channel/0029Vb9Mk9PGZNCjff7KpY3F" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a></nav>
+    <nav><a href="/"><i class="fa-solid fa-house" aria-hidden="true"></i> Beranda</a><a href="/create-paste"><i class="fa-solid fa-link" aria-hidden="true"></i> Paste Link</a><a href="#recent"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Explore Paste</a><a href="/videos"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Video</a><a id="telegramLink" href="https://t.me/iplayerch" target="_blank" rel="noopener"><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram</a><a id="whatsappLink" href="https://whatsapp.com/channel/0029Vb9Mk9PGZNCjff7KpY3F" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a></nav>
   </header>
   <main class="shell paste-page-shell">
     <section class="hero">
@@ -36,21 +36,21 @@
           <label>Visibilitas<select id="pasteVisibility"><option value="public">Public</option><option value="private">Private</option></select></label>
           <label>Tag <span>Opsional</span><input id="pasteTags" maxlength="80" placeholder="video, tutorial"></label>
         </div>
-        <div class="form-bottom"><p class="fineprint">Dengan menerbitkan, kamu menyetujui penggunaan layanan secara wajar.</p><button class="button primary" type="submit"><i class="fa-solid fa-rocket" aria-hidden="true"></i> Publish paste <span>↗</span></button></div>
+        <div class="form-bottom"><p class="fineprint">Dengan menerbitkan, kamu menyetujui penggunaan layanan secara wajar.</p><button class="button primary" type="submit">🚀 Publish paste <span>↗</span></button></div>
         <div id="createStatus" class="status" aria-live="polite"></div>
       </form>
-      <div id="createdResult" class="result-box hidden"><div><strong>Paste berhasil dibuat</strong><p id="createdUrl"></p></div><button class="button secondary" id="copyCreated"><i class="fa-regular fa-copy" aria-hidden="true"></i> Copy link</button></div>
+      <div id="createdResult" class="result-box hidden"><div><strong>Paste berhasil dibuat</strong><p id="createdUrl"></p></div><button class="button secondary" id="copyCreated">📋 Copy link</button></div>
     </section>
 
     <section id="reader" class="panel reader hidden"></section>
 
     <section id="recent" class="recent-section">
-      <div class="section-heading"><div><span class="eyebrow muted">THE COMMUNITY</span><h2>Recent public pastes</h2></div><button id="refreshPastes" class="button ghost"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Refresh</button></div>
+      <div class="section-heading"><div><span class="eyebrow muted">THE COMMUNITY</span><h2>Recent public pastes</h2></div><button id="refreshPastes" class="button ghost">🔄 Refresh</button></div>
       <div id="pasteList" class="paste-grid"><div class="empty-state">Memuat paste terbaru…</div></div>
       <button id="loadMore" class="button secondary centered hidden">Load more</button>
     </section>
     <footer><span>© <span id="year"></span> Vidpas</span><span>Made for sharing, built for focus.</span></footer>
   </main>
-  <dialog id="passwordDialog" class="dialog"><form method="dialog" id="passwordForm"><button class="dialog-close" value="cancel" aria-label="Tutup">×</button><div class="dialog-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></div><h2>This paste is protected</h2><p>Masukkan password untuk melanjutkan.</p><input id="readerPassword" type="password" placeholder="Paste password" required><div id="passwordStatus" class="status"></div><button class="button primary full" value="default">Unlock paste</button></form></dialog>
+  <dialog id="passwordDialog" class="dialog"><form method="dialog" id="passwordForm"><button class="dialog-close" value="cancel" aria-label="Tutup">×</button><div class="dialog-icon">🔐</div><h2>This paste is protected</h2><p>Masukkan password untuk melanjutkan.</p><input id="readerPassword" type="password" placeholder="Paste password" required><div id="passwordStatus" class="status"></div><button class="button primary full" value="default">Unlock paste</button></form></dialog>
   <script src="/app.js" type="module"></script>
 </body></html>

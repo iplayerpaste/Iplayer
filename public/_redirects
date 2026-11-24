@@ -1,9 +1,7 @@
-/admin/videos /admin-videos.html 200
+# Internal rewrites (200) keep clean URLs without redirect loops.
 /admin /admin.html 200
+/admin/videos /admin-videos.html 200
 /create-paste /paste.html 200
 /tag/* /paste.html 200
-/create-poster /create-poster.html 200
-/posters /explore-posters.html 200
-/poster/* /poster.html 200
 /videos /videos.html 200
 /v /videos.html 200

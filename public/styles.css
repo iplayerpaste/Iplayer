@@ -153,15 +153,3 @@ footer{display:flex;justify-content:space-between;color:#9aa4b5;font-size:10px;p
 /* Sub-to-unlock return flow */
 .unlock-task-action{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}.unlock-task-action .button{white-space:nowrap}.task-state{font-size:12px;color:#687386;min-width:92px;text-align:right}.unlock-task [data-open-task]:disabled{opacity:.75;cursor:default}.unlock-box .fineprint{display:block;margin-top:12px;line-height:1.55}.unlock-box #unlockProcessing{font-weight:600;color:#315fc4;min-height:20px;margin:10px 0}
 @media(max-width:520px){.unlock-task{align-items:flex-start;flex-direction:column}.unlock-task-action{width:100%;justify-content:space-between}.task-state{text-align:right}.unlock-task-action .button{flex:1}}
-
-/* Vidpas premium interaction layer */
-:root{--accent:#5368d8;--accent-dark:#4054c3;--accent-soft:#eef1ff}
-.topbar{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);box-shadow:0 1px 0 rgba(30,42,75,.05)}
-.topbar nav a{display:inline-flex;align-items:center;gap:8px;min-height:42px}
-.topbar nav a i{font-size:13px;color:#6674d9}
-.button{display:inline-flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;line-height:1.25}
-.button i{font-size:13px}
-a,button{-webkit-tap-highlight-color:transparent}
-button:focus-visible,a:focus-visible{outline:3px solid rgba(83,104,216,.25);outline-offset:3px}
-button:disabled{pointer-events:none}
-@media(max-width:620px){.topbar{align-items:flex-start;flex-direction:column;padding:12px 16px;gap:8px}.topbar nav{width:100%;overflow-x:auto;white-space:nowrap;padding:2px 0 5px}.topbar nav a{min-height:36px}.shell{padding-top:30px}}
