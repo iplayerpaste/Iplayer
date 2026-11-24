@@ -1,5 +1,5 @@
 # Cloudflare Pages clean URLs handle /videos and /admin directly.
-# Legacy entry points now lead to the correct Paste Link feature.
+# Legacy entry points now lead to the correct Pasteling feature.
 /create-paste /paste 301
 /create-poster /paste 301
-/posters /paste#recent 301
+/posters /explore-paste 301
