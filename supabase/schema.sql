@@ -10,7 +10,9 @@ create table if not exists public.pastes (
   tags text[] not null default '{}',
   created_at timestamptz not null default now(),
   expires_at timestamptz,
-  views bigint not null default 0
+  views bigint not null default 0,
+  likes bigint not null default 0,
+  shares bigint not null default 0
 );
 create index if not exists pastes_public_created_idx on public.pastes (created_at desc) where visibility='public';
 create index if not exists pastes_slug_idx on public.pastes(slug);
@@ -129,3 +131,7 @@ alter table public.posters enable row level security;
 alter table public.videos add column if not exists downloads bigint not null default 0;
 alter table public.videos add column if not exists shares bigint not null default 0;
 alter table public.videos add column if not exists likes bigint not null default 0;
+
+-- Paste Link public engagement counters (safe migration for existing projects).
+alter table public.pastes add column if not exists likes bigint not null default 0;
+alter table public.pastes add column if not exists shares bigint not null default 0;
