@@ -4,4 +4,4 @@ pages_build_output_dir = "./public"
 
 [vars]
 SITE_ORIGIN = "https://iplayer-5bh.pages.dev"
-PUBLIC_SITE_NAME = "ePlayer"
+PUBLIC_SITE_NAME = "Vidpas"
