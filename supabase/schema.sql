@@ -21,7 +21,7 @@ create table if not exists public.site_settings (
   value text not null default ''
 );
 insert into public.site_settings(key,value) values
- ('site_name','ePlayer'),
+ ('site_name','Vidpas'),
  ('telegram_url','https://t.me/iplayerch'),
  ('whatsapp_url','https://whatsapp.com/channel/0029Vb9Mk9PGZNCjff7KpY3F'),
  ('facebook_url',''),
@@ -109,3 +109,23 @@ do $$ begin
     alter table public.ads drop constraint ads_placement_check;
   end if;
 end $$;
+
+
+-- Vidpas poster-link library and video engagement counters.
+create table if not exists public.posters (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique not null,
+  title text not null,
+  description text not null default '',
+  image_url text not null,
+  target_url text not null,
+  author text not null default 'Komunitas',
+  published boolean not null default true,
+  views bigint not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists posters_published_created_idx on public.posters(created_at desc) where published=true;
+alter table public.posters enable row level security;
+alter table public.videos add column if not exists downloads bigint not null default 0;
+alter table public.videos add column if not exists shares bigint not null default 0;
+alter table public.videos add column if not exists likes bigint not null default 0;
