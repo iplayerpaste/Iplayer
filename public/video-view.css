@@ -107,3 +107,20 @@
  .community-notice{right:10px;bottom:12px}
  .video-floating-ad{bottom:10px}
 }
+
+
+/* 2026-11: precise countdown and clean ad placements */
+.unlock-countdown-ring{position:relative;border:0;animation:none;isolation:isolate}
+.unlock-countdown-ring::before{content:"";position:absolute;inset:0;border:4px solid #e5e7fb;border-top-color:#6b6ee1;border-radius:50%;animation:vidpas-spin 1s linear infinite;z-index:-1}
+.unlock-countdown-ring span{display:block;position:relative;z-index:1;animation:none !important;transform:none !important;opacity:1 !important;line-height:1}
+.related-ad{padding:0 !important;border:0 !important;border-radius:0 !important;background:transparent !important;box-shadow:none !important;overflow:visible}
+.ad-disclosure{display:none !important}
+.video-slide-ad,.video-floating-ad{padding:0 !important;border:0 !important;border-radius:0 !important;background:transparent !important;box-shadow:none !important;gap:0 !important;overflow:visible;width:max-content;max-width:calc(100vw - 12px)}
+.video-slide-ad{bottom:0}.video-floating-ad{bottom:14px}
+.video-slide-ad .ad-slot,.video-floating-ad .ad-slot{padding:0 !important;margin:0 !important;border:0 !important;background:transparent !important;box-shadow:none !important}
+.slide-ad-hide,.floating-ad-close{top:-12px;right:-8px;width:25px;height:25px;border:1px solid #dfe4ed;background:#fff;box-shadow:0 3px 12px #17233d20}
+.community-notice{top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 32px));max-height:calc(100dvh - 36px);overflow:auto;animation:vidpas-community-center-in .28s ease both}
+@keyframes vidpas-community-center-in{from{opacity:0;transform:translate(-50%,calc(-50% + 14px))}to{opacity:1;transform:translate(-50%,-50%)}}
+.community-notice.is-leaving{animation:vidpas-community-center-out .22s ease both}
+@keyframes vidpas-community-center-out{to{opacity:0;transform:translate(-50%,calc(-50% + 12px))}}
+@media(max-width:640px){.community-notice{top:50%;left:50%;right:auto;bottom:auto;width:calc(100vw - 32px)}.video-slide-ad,.video-floating-ad{max-width:calc(100vw - 8px)}.related-ad{padding:0 !important}}

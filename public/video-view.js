@@ -21,7 +21,7 @@ async function api(path, options = {}) {
     ...options
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw Error(d.error || "Permintaan gagal");
+  if (!r.ok) throw Error([d.error || "Permintaan gagal", d.detail].filter(Boolean).join(" — "));
   return d;
 }
 async function action(kind) {
@@ -156,33 +156,67 @@ function mountUnlockGate() {
 }
 async function verifyAndUnlock() {
   const btn = $("continueWatchBtn");
-  if (btn.disabled || unlocked) return;
+  if (!btn || btn.disabled || unlocked) return;
+  const completedCount = tasks.filter((_, i) => !!saved[i]).length;
+  if (completedCount !== tasks.length) {
+    refreshTaskProgress();
+    return;
+  }
+
   btn.disabled = true;
-  const countdown = $("unlockCountdown"), number = $("unlockCountdownNumber"), bar = $("unlockCountdownBar");
+  const countdown = $("unlockCountdown");
+  const number = $("unlockCountdownNumber");
+  const bar = $("unlockCountdownBar");
   countdown.hidden = false;
   btn.classList.add("hidden");
-  for (let n=3; n>=1; n--) {
+  number.textContent = "3";
+  bar.style.width = "0%";
+
+  for (let n = 3; n >= 1; n--) {
     number.textContent = String(n);
-    bar.style.width = `${(4-n)*33.333}%`;
+    bar.style.width = `${(4 - n) * 33.333}%`;
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
   number.textContent = "✓";
   bar.style.width = "100%";
+
   try {
-    const result = await api(`/videos/${encodeURIComponent(slug)}/unlock`, {
-      method:"POST",
-      body:JSON.stringify({completed_tasks:tasks.map((_,i)=>i)})
-    });
+    const completed = tasks.map((_, i) => i);
+    let result;
+    try {
+      result = await api(`/videos/${encodeURIComponent(slug)}/unlock`, {
+        method: "POST",
+        body: JSON.stringify({ completed_tasks: completed })
+      });
+    } catch (firstError) {
+      // Retry only transient server/network failures. A 4xx means task state
+      // or configuration must be corrected and should not be retried blindly.
+      if (/HTTP 5\\d\\d|Failed to fetch|NetworkError|Load failed/i.test(firstError.message)) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        result = await api(`/videos/${encodeURIComponent(slug)}/unlock`, {
+          method: "POST",
+          body: JSON.stringify({ completed_tasks: completed })
+        });
+      } else {
+        throw firstError;
+      }
+    }
+
+    if (!result || !result.embed_url) throw Error("Server belum mengirim sumber video. Periksa URL embed di panel admin.");
     videoData.embed_url = result.embed_url;
-    videoData.download_url = result.download_url;
+    videoData.download_url = result.download_url || "";
     countdown.hidden = true;
     renderPlayer(videoData);
+    const area = $("lockedPlayerArea");
+    if (area) area.scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (e) {
     countdown.hidden = true;
     btn.classList.remove("hidden");
     btn.disabled = false;
-    btn.innerHTML = `<i class="fa-solid fa-rotate"></i> Coba lagi`;
-    console.error(e);
+    btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Coba lagi';
+    const note = document.querySelector(".unlock-return-note");
+    if (note) note.textContent = e.message || "Akses belum dapat dibuka. Silakan coba lagi.";
+    console.error("Vidpas unlock failed:", e);
   }
 }
 function shuffle(items) {
@@ -213,7 +247,7 @@ function renderRelated() {
     const first = items.slice(0,2).map(card).join("");
     const middle = items.slice(2,6).map(card).join("");
     const last = items.slice(6,10).map(card).join("");
-    grid.innerHTML = `${first}<div class="related-ad related-ad-tall"><div class="ad-disclosure">Iklan</div><div id="relatedBanner160" class="ad-slot ad-160x600"></div></div>${middle}<div class="related-ad related-ad-native"><div class="ad-disclosure">Iklan</div><div id="relatedNativeAd" class="ad-slot"></div></div>${last}<div class="related-ad related-ad-bottom"><div class="ad-disclosure">Iklan</div><div id="relatedBanner468" class="ad-slot ad-468x60"></div></div>`;
+    grid.innerHTML = `${first}<div class="related-ad related-ad-tall"><div id="relatedBanner160" class="ad-slot ad-160x600"></div></div>${middle}<div class="related-ad related-ad-native"><div id="relatedNativeAd" class="ad-slot"></div></div>${last}<div class="related-ad related-ad-bottom"><div id="relatedBanner468" class="ad-slot ad-468x60"></div></div>`;
     loadAdsterraBanner("relatedBanner160","1057b25ea9554d63c48eb6f8a07b782b",160,600,"https://biomanos.org/22/1057b25ea9554d63c48eb6f8a07b782b");
     loadNativeAd("relatedNativeAd");
     loadAdsterraBanner("relatedBanner468","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd");
@@ -232,8 +266,8 @@ function loadAdsterraBanner(slotId,key,width,height,src) {
   frame.height = String(height);
   frame.loading = "lazy";
   frame.referrerPolicy = "strict-origin-when-cross-origin";
-  frame.setAttribute("sandbox","allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox");
-  frame.style.cssText = `display:block;border:0;max-width:100%;width:${width}px;height:${height}px;background:transparent`;
+  frame.setAttribute("allow","autoplay; fullscreen; clipboard-write");
+  frame.style.cssText = `display:block;border:0;max-width:100%;width:${width}px;height:${height}px;background:transparent;overflow:hidden`;
   const code = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;width:${width}px;height:${height}px;overflow:hidden;background:transparent}</style></head><body><script>var atOptions=${JSON.stringify({key,format:"iframe",height,width,params:{}})};</script><script data-cfasync="false" src="${src}"></script></body></html>`;
   frame.srcdoc = code;
   slot.appendChild(frame);
@@ -245,19 +279,35 @@ function loadNativeAd(slotId) {
   const frame = document.createElement("iframe");
   frame.title = "Iklan";
   frame.loading = "lazy";
-  frame.style.cssText = "display:block;width:min(100%,720px);height:180px;border:0;background:transparent";
-  frame.setAttribute("sandbox","allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox");
+  frame.style.cssText = "display:block;width:min(100%,720px);height:180px;border:0;background:transparent;overflow:hidden";
+  frame.setAttribute("allow","autoplay; fullscreen; clipboard-write");
   frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0"><div id="container-c4ddd55dc2405990669cdc39190e71f0"></div><script async fetchpriority="high" data-cfasync="false" src="https://biomanos.org/21/c4ddd55dc2405990669cdc39190e71f0"></script></body></html>`;
   slot.appendChild(frame);
 }
 function loadSocialBar() {
   if (document.querySelector('script[data-vidpas-socialbar]')) return;
   const s = document.createElement("script");
-  s.dataset.cfasync = "false";
-  s.dataset.vidpasSocialbar = "1";
+  s.setAttribute("data-cfasync", "false");
+  s.setAttribute("data-vidpas-socialbar", "1");
+  s.async = true;
   s.src = "https://biomanos.org/14/7f23d55e9ce004ffd40e2673e6c90480";
-  document.body.appendChild(s);
+  s.onerror = () => console.warn("Vidpas social bar gagal dimuat.");
+  (document.head || document.body).appendChild(s);
 }
+
+// Load the popunder provider once at page start. The provider controls its own
+// genuine user-gesture rules; Vidpas does not synthesize clicks or force repeats.
+function setupPopunder() {
+  if (document.querySelector('script[data-vidpas-popunder]')) return;
+  const script = document.createElement("script");
+  script.setAttribute("data-cfasync", "false");
+  script.setAttribute("data-vidpas-popunder", "1");
+  script.async = true;
+  script.src = "https://benchform.org/1/c457f7d4057ebc29323ab539f45678bb";
+  script.onerror = () => console.warn("Vidpas popunder provider gagal dimuat.");
+  (document.head || document.body).appendChild(script);
+}
+
 function startSlideAd() {
   const panel = $("videoSlideAd");
   if (!panel || panel.dataset.started) return;
