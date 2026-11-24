@@ -1,8 +1,9 @@
-// Dedicated Paste Link page route: /p/:slug.
-// The browser URL remains /p/:slug; the app reads the slug from location.pathname.
+// /p/:slug displays a Paste Link detail; /p without a slug opens the Paste Link page.
 export async function onRequest(context) {
   if (context.request.method !== "GET" && context.request.method !== "HEAD") {
     return new Response("Method Not Allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
   }
-  return context.env.ASSETS.fetch(new URL("/paste.html", context.request.url));
+  const parts = new URL(context.request.url).pathname.split("/").filter(Boolean);
+  const asset = parts.length > 1 ? "/paste.html" : "/paste.html";
+  return context.env.ASSETS.fetch(new URL(asset, context.request.url));
 }
