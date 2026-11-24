@@ -1,8 +1,9 @@
-// Dedicated Video detail route: /v/:slug.
-// Kept separate from /api/* and /p/* to prevent route collisions.
+// /v is the public video library; /v/:slug is a video detail page.
 export async function onRequest(context) {
   if (context.request.method !== "GET" && context.request.method !== "HEAD") {
     return new Response("Method Not Allowed", { status: 405, headers: { Allow: "GET, HEAD" } });
   }
-  return context.env.ASSETS.fetch(new URL("/video.html", context.request.url));
+  const parts = new URL(context.request.url).pathname.split("/").filter(Boolean);
+  const asset = parts.length > 1 ? "/video.html" : "/videos.html";
+  return context.env.ASSETS.fetch(new URL(asset, context.request.url));
 }
