@@ -11,7 +11,20 @@ const enc = new TextEncoder();
 const b64 = b=>btoa(String.fromCharCode(...new Uint8Array(b))).replaceAll("+","-").replaceAll("/","_").replaceAll("=","");
 async function hmac(secret,value){const key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64(await crypto.subtle.sign("HMAC",key,enc.encode(value)))}
 async function hashPassword(password,salt){const material=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:enc.encode(salt),iterations:150000,hash:"SHA-256"},material,256);return b64(bits)}
-async function db(env,path,opts={}){if(!env.SUPABASE_URL||!env.SUPABASE_SERVICE_ROLE_KEY)throw Error("Supabase belum dikonfigurasi");const r=await fetch(`${env.SUPABASE_URL}/rest/v1/${path}`,{...opts,headers:{apikey:env.SUPABASE_SERVICE_ROLE_KEY,Authorization:`Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,"Content-Type":"application/json",Prefer:opts.prefer||"return=representation",...(opts.headers||{})}});const t=await r.text();if(!r.ok)throw Error(`Database error: ${t.slice(0,250)}`);return t?JSON.parse(t):null}
+async function db(env,path,opts={}){
+ if(!env.SUPABASE_URL||!env.SUPABASE_SERVICE_ROLE_KEY)throw Error("Supabase belum dikonfigurasi: SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY kosong.");
+ const base=String(env.SUPABASE_URL).trim().replace(/\/+$/,"");
+ const key=String(env.SUPABASE_SERVICE_ROLE_KEY).trim();
+ const headers={apikey:key,"Content-Type":"application/json",Prefer:opts.prefer||"return=representation",...(opts.headers||{})};
+ // Legacy service_role keys are JWTs and must also be sent as Bearer tokens.
+ // New Supabase sb_secret_* keys are API keys, not JWTs; sending them as
+ // Authorization Bearer causes PostgREST to reject them as an invalid JWT.
+ if(key.startsWith("eyJ"))headers.Authorization=`Bearer ${key}`;
+ const r=await fetch(`${base}/rest/v1/${path}`,{...opts,headers});
+ const t=await r.text();
+ if(!r.ok){let message=t;try{const j=JSON.parse(t);message=j.message||j.error_description||j.error||j.hint||t}catch{};throw Error(`Supabase HTTP ${r.status}: ${String(message).slice(0,350)}`)}
+ return t?JSON.parse(t):null
+}
 async function body(req){try{return await req.json()}catch{return {}}}
 function cookie(name,value,maxAge){return `${name}=${value}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`}
 function getCookie(req,name){return (req.headers.get("Cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(name+"="))?.slice(name.length+1)}
@@ -21,7 +34,10 @@ async function settings(env){const rows=await db(env,"site_settings?select=key,v
 async function log(env,action,detail={}){try{await db(env,"admin_activity",{method:"POST",body:JSON.stringify({action,detail})})}catch{}}
 async function route(req,env,url){
  const p=url.pathname.replace(/^\/api/,"").replace(/\/$/,"")||"/",m=req.method;
- if(p==="/health")return json({ok:true,service:"Vidpas API"});
+ if(p==="/health"){
+   try{await db(env,"pastes?select=id&limit=1",{prefer:"return=minimal"});return json({ok:true,service:"Vidpas API",database:"connected"})}
+   catch(e){return json({ok:false,service:"Vidpas API",database:"error",detail:e.message},503)}
+  }
  if(p==="/settings"&&m==="GET"){const s=await settings(env);return json({site_name:s.site_name||"Vidpas",telegram_url:s.telegram_url||"",whatsapp_url:s.whatsapp_url||"",facebook_url:s.facebook_url||"",youtube_url:s.youtube_url||""})}
  if(p==="/pastes"&&m==="POST"){
   const b=await body(req);if(typeof b.content!=="string"||!b.content.trim()||b.content.length>100000)return err("Isi paste wajib diisi (maksimal 100 KB).");
@@ -125,4 +141,4 @@ async function route(req,env,url){
  }
  return err("Endpoint tidak ditemukan.",404);
 }
-export default {async fetch(req,env){const origin=req.headers.get("Origin")||env.SITE_ORIGIN||"*";if(req.method==="OPTIONS")return new Response(null,{headers:cors(origin)});try{const url=new URL(req.url);const response=await route(req,env,url);const headers=new Headers(response.headers);for(const [k,v]of Object.entries(cors(origin)))headers.set(k,v);return new Response(response.body,{status:response.status,headers})}catch(e){return json({error:"Terjadi kesalahan server.",detail:env.NODE_ENV==="development"?e.message:undefined},500,cors(origin))}}};
+export default {async fetch(req,env){const origin=req.headers.get("Origin")||env.SITE_ORIGIN||"*";if(req.method==="OPTIONS")return new Response(null,{headers:cors(origin)});try{const url=new URL(req.url);const response=await route(req,env,url);const headers=new Headers(response.headers);for(const [k,v]of Object.entries(cors(origin)))headers.set(k,v);return new Response(response.body,{status:response.status,headers})}catch(e){return json({error:"Terjadi kesalahan server.",detail:String(e?.message||"Unknown error").slice(0,400)},500,cors(origin))}}};
