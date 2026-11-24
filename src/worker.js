@@ -33,12 +33,12 @@ async function route(req,env,url){
  if(p==="/pastes"&&m==="GET"){
   const limit=Math.min(50,Math.max(1,Number(url.searchParams.get("limit"))||12));
   const offset=Math.max(0,Number(url.searchParams.get("offset"))||0);
-  const rows=await db(env,`pastes?visibility=eq.public&or=(expires_at.is.null,expires_at.gt.${encodeURIComponent(new Date().toISOString())})&select=slug,title,content,tags,created_at,views,likes,shares&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
-  const items=rows.slice(0,limit).map(x=>({slug:x.slug,title:x.title,excerpt:x.content.slice(0,130),tags:x.tags,created_at:x.created_at,views:x.views,likes:x.likes||0,shares:x.shares||0}));
+  const rows=await db(env,`pastes?visibility=eq.public&or=(expires_at.is.null,expires_at.gt.${encodeURIComponent(new Date().toISOString())})&select=slug,title,content,tags,created_at,views&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
+  const items=rows.slice(0,limit).map(x=>({slug:x.slug,title:x.title,excerpt:x.content.slice(0,130),tags:x.tags,created_at:x.created_at,views:x.views,likes:0,shares:0}));
   const totalRows=await db(env,"pastes?visibility=eq.public&or=(expires_at.is.null,expires_at.gt."+encodeURIComponent(new Date().toISOString())+")&select=id");return json({items,total:totalRows.length,has_more:rows.length>limit});
  }
  const tagMatch=p.match(/^\/pastes\/tag\/([^/]+)$/);
- if(tagMatch&&m==="GET"){const tag=decodeURIComponent(tagMatch[1]),limit=Math.min(50,Math.max(1,Number(url.searchParams.get("limit"))||12)),offset=Math.max(0,Number(url.searchParams.get("offset"))||0);const rows=await db(env,`pastes?visibility=eq.public&tags=cs.{${encodeURIComponent(tag)}}&or=(expires_at.is.null,expires_at.gt.${encodeURIComponent(new Date().toISOString())})&select=slug,title,content,tags,created_at,views,likes,shares&order=created_at.desc&limit=${limit+1}&offset=${offset}`);const items=rows.slice(0,limit).map(x=>({slug:x.slug,title:x.title,excerpt:x.content.slice(0,130),tags:x.tags,created_at:x.created_at,views:x.views,likes:x.likes||0,shares:x.shares||0}));return json({items,total:items.length+offset+(rows.length>limit?1:0),has_more:rows.length>limit})}
+ if(tagMatch&&m==="GET"){const tag=decodeURIComponent(tagMatch[1]),limit=Math.min(50,Math.max(1,Number(url.searchParams.get("limit"))||12)),offset=Math.max(0,Number(url.searchParams.get("offset"))||0);const rows=await db(env,`pastes?visibility=eq.public&tags=cs.{${encodeURIComponent(tag)}}&or=(expires_at.is.null,expires_at.gt.${encodeURIComponent(new Date().toISOString())})&select=slug,title,content,tags,created_at,views&order=created_at.desc&limit=${limit+1}&offset=${offset}`);const items=rows.slice(0,limit).map(x=>({slug:x.slug,title:x.title,excerpt:x.content.slice(0,130),tags:x.tags,created_at:x.created_at,views:x.views,likes:0,shares:0}));return json({items,total:items.length+offset+(rows.length>limit?1:0),has_more:rows.length>limit})}
  const meta=p.match(/^\/pastes\/([^/]+)\/meta$/);
  if(meta&&m==="GET"){const rows=await db(env,`pastes?slug=eq.${encodeURIComponent(meta[1])}&select=slug,password_hash,visibility,expires_at`);if(!rows.length)return err("Paste tidak ditemukan.",404);const x=rows[0];return json({protected:!!x.password_hash,expired:!!x.expires_at&&new Date(x.expires_at)<new Date()})}
  const access=p.match(/^\/pastes\/([^/]+)\/access$/);
@@ -69,12 +69,12 @@ async function route(req,env,url){
  if(posterMatch&&m==="GET") {const rows=await db(env,`posters?slug=eq.${encodeURIComponent(posterMatch[1])}&published=eq.true&select=slug,title,description,image_url,target_url,author,views,created_at`);if(!rows.length)return err("Poster tidak ditemukan.",404);const x=rows[0];await db(env,`posters?slug=eq.${encodeURIComponent(x.slug)}`,{method:"PATCH",body:JSON.stringify({views:(x.views||0)+1})});return json({...x,views:(x.views||0)+1});}
  if(p==="/videos"&&m==="GET"){
   const limit=Math.min(20,Math.max(1,Number(url.searchParams.get("limit"))||20)); const offset=Math.max(0,Number(url.searchParams.get("offset"))||0);
-  const rows=await db(env,`videos?published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,downloads,shares,likes,created_at&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
-  const totalRows=await db(env,"videos?published=eq.true&select=id");return json({items:rows.slice(0,limit),total:totalRows.length,has_more:rows.length>limit});
+  const rows=await db(env,`videos?published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,created_at&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
+  const items=rows.slice(0,limit).map(x=>({...x,downloads:0,shares:0,likes:0}));const totalRows=await db(env,"videos?published=eq.true&select=id");return json({items,total:totalRows.length,has_more:rows.length>limit});
  }
  const videoMatch=p.match(/^\/videos\/([a-zA-Z0-9_-]+)$/);
  if(videoMatch&&m==="GET"){
-  const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoMatch[1])}&published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,downloads,shares,likes,created_at`);
+  const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoMatch[1])}&published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,created_at`);
   if(!rows.length)return err("Video tidak ditemukan.",404);
   const x=rows[0]; await db(env,`videos?slug=eq.${encodeURIComponent(x.slug)}`,{method:"PATCH",body:JSON.stringify({views:(x.views||0)+1})});
   return json({...x,views:(x.views||0)+1});
