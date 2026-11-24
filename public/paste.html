@@ -16,17 +16,17 @@
   <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
   <header class="topbar">
     <a class="brand" href="/"><span class="brand-mark">V</span><span>Vidpas</span></a>
-    <nav><a href="/"><i class="fa-solid fa-house" aria-hidden="true"></i> Beranda</a><a href="/create-paste"><i class="fa-solid fa-link" aria-hidden="true"></i> Paste Link</a><a href="#recent"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Explore Paste</a><a href="/videos"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Video</a><a id="telegramLink" href="https://t.me/iplayerch" target="_blank" rel="noopener"><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram</a><a id="whatsappLink" href="https://whatsapp.com/channel/0029Vb9Mk9PGZNCjff7KpY3F" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a></nav>
+    <nav><a href="/"><i class="fa-solid fa-house" aria-hidden="true"></i> Beranda</a><a href="/paste"><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Buat Paste Link</a><a href="#recent"><i class="fa-solid fa-compass" aria-hidden="true"></i> Explore Paste</a><a href="/videos"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Explore Video</a><a id="telegramLink" href="https://t.me/iplayerch" target="_blank" rel="noopener"><i class="fa-brands fa-telegram" aria-hidden="true"></i> Telegram</a><a id="whatsappLink" href="https://whatsapp.com/channel/0029Vb9Mk9PGZNCjff7KpY3F" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a></nav>
   </header>
   <main class="shell paste-page-shell">
     <section class="hero">
       <div class="eyebrow"><span class="pulse"></span> SIMPLE. PRIVATE. SHAREABLE.</div>
       <h1>Your words.<br><span>One clean link.</span></h1>
-      <p class="hero-copy">Simpan teks, bagikan dengan mudah, dan kendalikan siapa yang bisa mengaksesnya.</p>
+      <p class="hero-copy">Buat satu link untuk teks, catatan, atau kumpulan tautanmu. Atur password, pilih publik agar ditemukan di Explore Paste, atau privat agar hanya orang yang memiliki link yang bisa membukanya.</p>
     </section>
 
     <section class="composer panel">
-      <div class="section-heading"><div><span class="eyebrow muted">CREATE SOMETHING</span><h2>Create a paste</h2></div><span class="secure-label">✦ Secure by design</span></div>
+      <div class="section-heading"><div><span class="eyebrow muted">CREATE SOMETHING</span><h2>Buat Paste Link</h2></div><span class="secure-label">✦ Secure by design</span></div>
       <form id="createForm">
         <label>Judul <span>Opsional</span><input id="pasteTitle" maxlength="120" placeholder="Contoh: Resource collection"></label>
         <label>Isi paste<textarea id="pasteContent" required minlength="1" maxlength="100000" rows="9" placeholder="Tulis atau tempel konten kamu di sini..."></textarea></label>
@@ -36,7 +36,7 @@
           <label>Visibilitas<select id="pasteVisibility"><option value="public">Public</option><option value="private">Private</option></select></label>
           <label>Tag <span>Opsional</span><input id="pasteTags" maxlength="80" placeholder="video, tutorial"></label>
         </div>
-        <div class="form-bottom"><p class="fineprint">Dengan menerbitkan, kamu menyetujui penggunaan layanan secara wajar.</p><button class="button primary" type="submit">🚀 Publish paste <span>↗</span></button></div>
+        <div class="form-bottom"><p class="fineprint"><i class="fa-solid fa-shield-halved"></i> Publik tampil di Explore Paste. Privat tidak ditampilkan di penjelajahan. Password melindungi isi Paste Link.</p><button class="button primary" type="submit"><i class="fa-solid fa-cloud-arrow-up"></i> Terbitkan Paste Link <span>↗</span></button></div>
         <div id="createStatus" class="status" aria-live="polite"></div>
       </form>
       <div id="createdResult" class="result-box hidden"><div><strong>Paste berhasil dibuat</strong><p id="createdUrl"></p></div><button class="button secondary" id="copyCreated">📋 Copy link</button></div>
@@ -45,12 +45,12 @@
     <section id="reader" class="panel reader hidden"></section>
 
     <section id="recent" class="recent-section">
-      <div class="section-heading"><div><span class="eyebrow muted">THE COMMUNITY</span><h2>Recent public pastes</h2></div><button id="refreshPastes" class="button ghost">🔄 Refresh</button></div>
+      <div class="section-heading"><div><span class="eyebrow muted">THE COMMUNITY</span><h2>Explore Paste Link</h2><p class="section-subtitle">Temukan semua Paste Link publik yang sudah diterbitkan komunitas.</p></div><button id="refreshPastes" class="button ghost"><i class="fa-solid fa-rotate"></i> Refresh</button></div>
       <div id="pasteList" class="paste-grid"><div class="empty-state">Memuat paste terbaru…</div></div>
-      <button id="loadMore" class="button secondary centered hidden">Load more</button>
+      <button id="loadMore" class="button secondary centered hidden"><i class="fa-solid fa-plus"></i> Muat lebih banyak</button>
     </section>
-    <footer><span>© <span id="year"></span> Vidpas</span><span>Made for sharing, built for focus.</span></footer>
+    <section class="paste-benefits"><article><i class="fa-solid fa-lock"></i><strong>Password protection</strong><span>Lindungi isi Paste Link dengan password.</span></article><article><i class="fa-solid fa-earth-americas"></i><strong>Public atau private</strong><span>Atur apakah Paste Link tampil di Explore.</span></article><article><i class="fa-solid fa-share-nodes"></i><strong>Bagikan dengan mudah</strong><span>Satu link untuk dibagikan ke teman.</span></article></section><footer><span>© <span id="year"></span> Vidpas</span><span>Support Vidpas dengan membagikan website ini.</span><button class="button ghost" id="supportShare"><i class="fa-solid fa-heart"></i> Share Vidpas</button></footer>
   </main>
-  <dialog id="passwordDialog" class="dialog"><form method="dialog" id="passwordForm"><button class="dialog-close" value="cancel" aria-label="Tutup">×</button><div class="dialog-icon">🔐</div><h2>This paste is protected</h2><p>Masukkan password untuk melanjutkan.</p><input id="readerPassword" type="password" placeholder="Paste password" required><div id="passwordStatus" class="status"></div><button class="button primary full" value="default">Unlock paste</button></form></dialog>
-  <script src="/app.js" type="module"></script>
+  <dialog id="passwordDialog" class="dialog"><form method="dialog" id="passwordForm"><button class="dialog-close" value="cancel" aria-label="Tutup">×</button><div class="dialog-icon"><i class="fa-solid fa-lock"></i></div><h2>This paste is protected</h2><p>Masukkan password untuk melanjutkan.</p><input id="readerPassword" type="password" placeholder="Paste password" required><div id="passwordStatus" class="status"></div><button class="button primary full" value="default">Unlock paste</button></form></dialog>
+  <script src="/app.js" type="module"></script><script type="module">document.getElementById('supportShare')?.addEventListener('click',()=>{const data={title:'Vidpas — Paste Link & Video',text:'Buat Paste Link yang bisa dilindungi password dan jelajahi video gratis di Vidpas.',url:location.origin};if(navigator.share)navigator.share(data).catch(()=>{});else navigator.clipboard?.writeText(location.origin).then(()=>alert('Link Vidpas berhasil disalin.'))});</script>
 </body></html>
