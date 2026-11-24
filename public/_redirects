@@ -1,5 +1,11 @@
-/p/* /index.html 200
-/tag/* /index.html 200
-/v /index.html 200
-/v/* /index.html 200
+/admin/videos /admin-videos.html 200
 /admin /admin.html 200
+/create-paste /paste.html 200
+/p/* /paste.html 200
+/tag/* /paste.html 200
+/create-poster /create-poster.html 200
+/posters /explore-posters.html 200
+/poster/* /poster.html 200
+/videos /videos.html 200
+/v /videos.html 200
+/v/* /video.html 200
