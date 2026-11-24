@@ -10,7 +10,8 @@ const random = (n=9)=>Array.from(crypto.getRandomValues(new Uint8Array(n)),b=>"a
 const enc = new TextEncoder();
 const b64 = b=>btoa(String.fromCharCode(...new Uint8Array(b))).replaceAll("+","-").replaceAll("/","_").replaceAll("=","");
 async function hmac(secret,value){const key=await crypto.subtle.importKey("raw",enc.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return b64(await crypto.subtle.sign("HMAC",key,enc.encode(value)))}
-async function hashPassword(password,salt){const material=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:enc.encode(salt),iterations:150000,hash:"SHA-256"},material,256);return b64(bits)}
+const PASSWORD_HASH_ITERATIONS = 100000; // Cloudflare Workers Web Crypto maximum supported PBKDF2 iteration count.
+async function hashPassword(password,salt){const material=await crypto.subtle.importKey("raw",enc.encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:enc.encode(salt),iterations:PASSWORD_HASH_ITERATIONS,hash:"SHA-256"},material,256);return b64(bits)}
 async function db(env,path,opts={}){
  if(!env.SUPABASE_URL||!env.SUPABASE_SERVICE_ROLE_KEY)throw Error("Supabase belum dikonfigurasi: SUPABASE_URL atau SUPABASE_SERVICE_ROLE_KEY kosong.");
  const base=String(env.SUPABASE_URL).trim().replace(/\/+$/,"");
@@ -43,7 +44,7 @@ async function route(req,env,url){
      return json({ok:false,service:"Vidpas API",database:"error",table,detail:e.message},503);
     }
    }
-   return json({ok:true,service:"Vidpas API",database:"connected",checks:{pastes:"ok",videos:"ok"}});
+   return json({ok:true,service:"Vidpas API",database:"connected",release:"vidpas-pbkdf2-100k-r2",pbkdf2_iterations:PASSWORD_HASH_ITERATIONS,checks:{pastes:"ok",videos:"ok"}});
   }
  if(p==="/settings"&&m==="GET"){const s=await settings(env);return json({site_name:s.site_name||"Vidpas",telegram_url:s.telegram_url||"",whatsapp_url:s.whatsapp_url||"",facebook_url:s.facebook_url||"",youtube_url:s.youtube_url||""})}
  if(p==="/pastes"&&m==="POST"){
