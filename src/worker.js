@@ -35,8 +35,15 @@ async function log(env,action,detail={}){try{await db(env,"admin_activity",{meth
 async function route(req,env,url){
  const p=url.pathname.replace(/^\/api/,"").replace(/\/$/,"")||"/",m=req.method;
  if(p==="/health"){
-   try{await db(env,"pastes?select=id&limit=1",{prefer:"return=minimal"});return json({ok:true,service:"Vidpas API",database:"connected"})}
-   catch(e){return json({ok:false,service:"Vidpas API",database:"error",detail:e.message},503)}
+   // Check both collections used by the public Explore pages.
+   for (const table of ["pastes","videos"]) {
+    try {
+     await db(env,`${table}?select=id&limit=1`,{prefer:"return=minimal"});
+    } catch(e) {
+     return json({ok:false,service:"Vidpas API",database:"error",table,detail:e.message},503);
+    }
+   }
+   return json({ok:true,service:"Vidpas API",database:"connected",checks:{pastes:"ok",videos:"ok"}});
   }
  if(p==="/settings"&&m==="GET"){const s=await settings(env);return json({site_name:s.site_name||"Vidpas",telegram_url:s.telegram_url||"",whatsapp_url:s.whatsapp_url||"",facebook_url:s.facebook_url||"",youtube_url:s.youtube_url||""})}
  if(p==="/pastes"&&m==="POST"){
