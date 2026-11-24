@@ -22,7 +22,7 @@ async function log(env,action,detail={}){try{await db(env,"admin_activity",{meth
 async function route(req,env,url){
  const p=url.pathname.replace(/^\/api/,"").replace(/\/$/,"")||"/",m=req.method;
  if(p==="/health")return json({ok:true,service:"ePlayer API"});
- if(p==="/settings"&&m==="GET"){const s=await settings(env);return json({site_name:s.site_name||"ePlayer",telegram_url:s.telegram_url||"",whatsapp_url:s.whatsapp_url||""})}
+ if(p==="/settings"&&m==="GET"){const s=await settings(env);return json({site_name:s.site_name||"ePlayer",telegram_url:s.telegram_url||"",whatsapp_url:s.whatsapp_url||"",facebook_url:s.facebook_url||"",youtube_url:s.youtube_url||""})}
  if(p==="/pastes"&&m==="POST"){
   const b=await body(req);if(typeof b.content!=="string"||!b.content.trim()||b.content.length>100000)return err("Isi paste wajib diisi (maksimal 100 KB).");
   const slug=random(9),salt=random(16),password_hash=b.password?`${salt}:${await hashPassword(b.password,salt)}`:null;
@@ -42,16 +42,54 @@ async function route(req,env,url){
  if(meta&&m==="GET"){const rows=await db(env,`pastes?slug=eq.${encodeURIComponent(meta[1])}&select=slug,password_hash,visibility,expires_at`);if(!rows.length||rows[0].visibility!=="public")return err("Paste tidak ditemukan.",404);const x=rows[0];return json({protected:!!x.password_hash,expired:!!x.expires_at&&new Date(x.expires_at)<new Date()})}
  const access=p.match(/^\/pastes\/([^/]+)\/access$/);
  if(access&&m==="POST"){const b=await body(req),rows=await db(env,`pastes?slug=eq.${encodeURIComponent(access[1])}&select=*`);if(!rows.length)return err("Paste tidak ditemukan.",404);const x=rows[0];if(x.visibility!=="public")return err("Paste tidak ditemukan.",404);if(x.expires_at&&new Date(x.expires_at)<new Date())return err("Paste sudah kedaluwarsa.",410);if(x.password_hash){const [salt,expected]=x.password_hash.split(":");if(!b.password||await hashPassword(b.password,salt)!==expected)return err("Password salah.",401)}await db(env,`pastes?slug=eq.${encodeURIComponent(x.slug)}`,{method:"PATCH",body:JSON.stringify({views:(x.views||0)+1})});return json({title:x.title,content:x.content,created_at:x.created_at,views:(x.views||0)+1})}
+
+ if(p==="/videos"&&m==="GET"){
+  const limit=Math.min(20,Math.max(1,Number(url.searchParams.get("limit"))||20)); const offset=Math.max(0,Number(url.searchParams.get("offset"))||0);
+  const rows=await db(env,`videos?published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,created_at&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
+  return json({items:rows.slice(0,limit),has_more:rows.length>limit});
+ }
+ const videoMatch=p.match(/^\/videos\/([a-zA-Z0-9_-]+)$/);
+ if(videoMatch&&m==="GET"){
+  const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoMatch[1])}&published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,created_at`);
+  if(!rows.length)return err("Video tidak ditemukan.",404);
+  const x=rows[0]; await db(env,`videos?slug=eq.${encodeURIComponent(x.slug)}`,{method:"PATCH",body:JSON.stringify({views:(x.views||0)+1})});
+  return json({...x,views:(x.views||0)+1});
+ }
+ if(p==="/announcements"&&m==="GET"){
+  const rows=await db(env,"announcements?active=eq.true&select=id,title,content,created_at&order=created_at.desc&limit=50"); return json({items:rows});
+ }
+ if(p==="/presence"&&m==="POST"){
+  const b=await body(req); const visitor=String(b.visitor_id||"").replace(/[^a-zA-Z0-9_-]/g,"").slice(0,80); if(!visitor)return err("ID pengunjung tidak valid.");
+  await db(env,"online_presence?on_conflict=visitor_id",{method:"POST",prefer:"resolution=merge-duplicates,return=minimal",body:JSON.stringify({visitor_id:visitor,last_seen:new Date().toISOString()})}); return json({ok:true});
+ }
+ if(p==="/ads/active"&&m==="GET"){
+  const placement=String(url.searchParams.get("placement")||"site_all");
+  const rows=await db(env,`ads?active=eq.true&select=id,name,placement,ad_type,size,script&or=(placement.eq.site_all,placement.eq.${encodeURIComponent(placement)})`); return json({items:rows});
+ }
  if(p==="/admin/login"&&m==="POST"){const b=await body(req);if(!env.ADMIN_PASSWORD_HASH||!env.SESSION_SECRET)return err("Rahasia admin belum dikonfigurasi.",503);const [salt,expected]=env.ADMIN_PASSWORD_HASH.split(":");if(!salt||!expected||await hashPassword(String(b.password||""),salt)!==expected)return err("Password admin salah.",401);const id=random(24),sig=await hmac(env.SESSION_SECRET,id);await db(env,"admin_sessions",{method:"POST",body:JSON.stringify({id,expires_at:new Date(Date.now()+8*3600e3).toISOString()})});await log(env,"admin_login");return json({ok:true},200,{"Set-Cookie":cookie("ep_session",`${id}.${sig}`,28800)})}
  if(p==="/admin/logout"&&m==="POST"){if(await session(req,env)){const token=getCookie(req,"ep_session"),id=token?.split(".")[0];if(id)await db(env,`admin_sessions?id=eq.${encodeURIComponent(id)}`,{method:"DELETE"})}return json({ok:true},200,{"Set-Cookie":cookie("ep_session","",0)})}
  if(p.startsWith("/admin/")){if(!await requireAdmin(req,env))return err("Akses admin diperlukan.",401);
-  if(p==="/admin/dashboard"&&m==="GET"){const rows=await db(env,"pastes?select=visibility,views,expires_at");return json({total_pastes:rows.length,public_pastes:rows.filter(x=>x.visibility==="public").length,total_views:rows.reduce((a,x)=>a+(x.views||0),0)})}
+  if(p==="/admin/dashboard"&&m==="GET"){const rows=await db(env,"pastes?select=visibility,views,expires_at");const videos=await db(env,"videos?select=id,views");const online=await db(env,`online_presence?last_seen=gt.${encodeURIComponent(new Date(Date.now()-120000).toISOString())}&select=visitor_id`);return json({total_pastes:rows.length,public_pastes:rows.filter(x=>x.visibility==="public").length,total_views:rows.reduce((a,x)=>a+(x.views||0),0),total_videos:videos.length,video_views:videos.reduce((a,x)=>a+(x.views||0),0),online_now:online.length})}
   if(p==="/admin/settings"&&m==="GET")return json(await settings(env));
-  if(p==="/admin/settings"&&m==="PUT"){const b=await body(req);for(const [key,value] of Object.entries({telegram_url:b.telegram_url,whatsapp_url:b.whatsapp_url,site_name:b.site_name})){if(value!==undefined)await db(env,"site_settings?on_conflict=key",{method:"POST",prefer:"resolution=merge-duplicates,return=representation",body:JSON.stringify({key,value})})}await log(env,"settings_updated");return json({ok:true})}
-  if(p==="/admin/ads"&&m==="GET")return json({items:await db(env,"ads?select=id,name,placement,active,created_at&order=created_at.desc")});
-  if(p==="/admin/ads"&&m==="POST"){const b=await body(req);if(!b.name||!b.script||b.script.length>30000)return err("Nama dan script iklan wajib diisi.");const rows=await db(env,"ads",{method:"POST",body:JSON.stringify({name:String(b.name).slice(0,80),placement:b.placement,script:b.script,active:true})});await log(env,"ad_created",{name:b.name});return json({item:rows[0]},201)}
+  if(p==="/admin/settings"&&m==="PUT"){const b=await body(req);for(const [key,value] of Object.entries({telegram_url:b.telegram_url,whatsapp_url:b.whatsapp_url,facebook_url:b.facebook_url,youtube_url:b.youtube_url,site_name:b.site_name})){if(value!==undefined)await db(env,"site_settings?on_conflict=key",{method:"POST",prefer:"resolution=merge-duplicates,return=representation",body:JSON.stringify({key,value})})}await log(env,"settings_updated");return json({ok:true})}
+  if(p==="/admin/ads"&&m==="GET")return json({items:await db(env,"ads?select=id,name,placement,ad_type,size,active,created_at&order=created_at.desc")});
+  if(p==="/admin/ads"&&m==="POST"){const b=await body(req);if(!b.name||!b.script||b.script.length>30000)return err("Nama dan script iklan wajib diisi.");const placements=["site_all","paste_top","paste_middle","paste_bottom","video_top","video_bottom","explore_top","explore_grid","navbar","home"];const types=["popunder","social_bar","native","video_ads","banner","smartlink"];if(!placements.includes(b.placement)||!types.includes(b.ad_type||"banner"))return err("Format atau posisi iklan tidak valid.");const rows=await db(env,"ads",{method:"POST",body:JSON.stringify({name:String(b.name).slice(0,80),placement:b.placement,ad_type:b.ad_type||"banner",size:String(b.size||"responsive"),script:b.script,active:true})});await log(env,"ad_created",{name:b.name});return json({item:rows[0]},201)}
   const ad=p.match(/^\/admin\/ads\/([0-9a-f-]+)$/);
   if(ad&&m==="PATCH"){const rows=await db(env,`ads?id=eq.${ad[1]}&select=active`);if(!rows.length)return err("Iklan tidak ditemukan.",404);await db(env,`ads?id=eq.${ad[1]}`,{method:"PATCH",body:JSON.stringify({active:!rows[0].active})});return json({ok:true})}
+
+  if(p==="/admin/videos"&&m==="GET")return json({items:await db(env,"videos?select=*&order=created_at.desc")});
+  if(p==="/admin/videos"&&m==="POST"){
+   const b=await body(req);if(!b.title||!b.embed_url)return err("Judul dan URL embed wajib diisi.");
+   let u;try{u=new URL(b.embed_url)}catch{return err("URL embed tidak valid.")};if(!["https:","http:"].includes(u.protocol))return err("URL embed harus HTTP/HTTPS.");
+   const slug=random(8);const rows=await db(env,"videos",{method:"POST",body:JSON.stringify({slug,title:String(b.title).slice(0,160),description:String(b.description||"").slice(0,5000),embed_url:u.href,thumbnail_url:String(b.thumbnail_url||"").slice(0,1000),orientation:b.orientation==="vertical"?"vertical":"horizontal",download_url:String(b.download_url||"").slice(0,1000),unlock_tasks:Array.isArray(b.unlock_tasks)?b.unlock_tasks.slice(0,5):[],published:b.published!==false})});await log(env,"video_created",{slug});return json({item:rows[0],url:`${env.SITE_ORIGIN||url.origin}/v/${slug}`},201);
+  }
+  const vm=p.match(/^\/admin\/videos\/([0-9a-f-]+)$/);
+  if(vm&&m==="PATCH"){const b=await body(req);const patch={};for(const k of ["title","description","embed_url","thumbnail_url","orientation","download_url","unlock_tasks","published"])if(b[k]!==undefined)patch[k]=b[k];await db(env,`videos?id=eq.${vm[1]}`,{method:"PATCH",body:JSON.stringify(patch)});return json({ok:true})}
+  if(vm&&m==="DELETE"){await db(env,`videos?id=eq.${vm[1]}`,{method:"DELETE"});return json({ok:true})}
+  if(p==="/admin/announcements"&&m==="GET")return json({items:await db(env,"announcements?select=*&order=created_at.desc")});
+  if(p==="/admin/announcements"&&m==="POST"){const b=await body(req);if(!b.title||!b.content)return err("Judul dan isi pengumuman wajib diisi.");const rows=await db(env,"announcements",{method:"POST",body:JSON.stringify({title:String(b.title).slice(0,160),content:String(b.content).slice(0,10000),active:true})});await log(env,"announcement_created");return json({item:rows[0]},201)}
+  const am=p.match(/^\/admin\/announcements\/([0-9a-f-]+)$/);if(am&&m==="DELETE"){await db(env,`announcements?id=eq.${am[1]}`,{method:"DELETE"});return json({ok:true})}
+  if(p==="/admin/presence"&&m==="GET"){const rows=await db(env,`online_presence?last_seen=gt.${encodeURIComponent(new Date(Date.now()-120000).toISOString())}&select=visitor_id,last_seen&order=last_seen.desc`);return json({online_now:rows.length,visitors:rows})}
   if(ad&&m==="DELETE"){await db(env,`ads?id=eq.${ad[1]}`,{method:"DELETE"});await log(env,"ad_deleted");return json({ok:true})}
  }
  return err("Endpoint tidak ditemukan.",404);
