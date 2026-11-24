@@ -150,3 +150,76 @@
 
 .ad-300x250{width:min(300px,100%);min-height:250px}.ad-728x90{width:min(728px,100%);min-height:90px}
 .related-ad-square,.related-ad-leaderboard{grid-column:1/-1}
+
+/* Revised video-detail sequence: player > MORE TO WATCH > publisher > actions > unlock */
+.video-gate-shell{display:flex;flex-direction:column;gap:0;background:#fff}
+.video-page-ad{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;padding:14px 18px;overflow:hidden;background:#fff}
+.video-page-ad .ad-caption{font-size:9px;font-weight:700;letter-spacing:1px;color:#a3aaba;text-transform:uppercase}
+.video-page-ad .ad-slot{width:100%;min-height:0}
+.video-top-ad{padding-top:18px;padding-bottom:16px;border-bottom:1px solid #f0f2f7}
+.video-mid-ad{padding-top:8px;padding-bottom:15px}
+.video-unlock-ad{border-top:1px solid #f0f2f7;padding-top:18px;padding-bottom:22px}
+.video-stage-wrap{padding:18px 20px 20px;background:#fff}
+.video-stage-wrap .player-topline{padding:0 2px 12px}
+.video-stage-wrap .video-player{border-radius:15px}
+.video-stage-loading{display:grid;place-items:center;min-height:clamp(190px,48vw,420px);border-radius:15px;background:#0b1020}
+.video-stage-locked{position:relative;display:grid;place-items:center;aspect-ratio:16/9;min-height:220px;max-height:560px;overflow:hidden;border-radius:15px;background:#101827 center/cover no-repeat;background-image:var(--stage-thumb,linear-gradient(135deg,#151d35,#293451))}
+.video-stage-shade{position:absolute;inset:0;background:linear-gradient(120deg,#080d1dcc,#111a35a8)}
+.video-stage-message{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:9px;padding:22px;text-align:center;color:#fff}
+.video-stage-message>i{width:48px;height:48px;display:grid;place-items:center;border:1px solid #ffffff40;border-radius:15px;background:#ffffff1c;font-size:18px}
+.video-stage-message strong{font:700 clamp(17px,2.6vw,23px) "Space Grotesk",sans-serif}
+.video-stage-message span{font-size:11px;color:#e0e5f1;line-height:1.6}
+.more-watch-strip{padding:14px 22px 10px;border-top:1px solid #f0f2f7}
+.more-watch-strip .related-kicker{display:inline-flex;align-items:center;gap:8px;color:#6267dc;font-size:10px;font-weight:900;letter-spacing:1.3px}
+.video-info{padding:22px 28px 18px}
+.video-actions-panel{margin:0 28px 18px}
+.locked-player-area{padding:0 0 18px;background:#fff}
+.locked-player-area[hidden]{display:none!important}
+@media(max-width:640px){
+ .video-stage-wrap{padding:12px 12px 14px}
+ .video-stage-wrap .player-topline{font-size:9px}
+ .video-stage-locked{min-height:190px;border-radius:12px}
+ .video-page-ad{padding:12px 8px}
+ .video-page-ad .ad-slot iframe{max-width:100%}
+ .more-watch-strip{padding:12px 14px 8px}
+ .video-info{padding:18px 14px 14px}
+ .video-actions-panel{margin:0 12px 15px}
+ .locked-player-area{padding-bottom:14px}
+}
+@media(min-width:641px){.locked-player-area.is-locked{padding:0 0 18px;background:#fff}}
+.locked-player-area.is-locked{padding:0 0 18px;background:#fff}
+
+/* Two-state video detail flow: compact task gate first, publisher layout after unlock. */
+.unlock-first-view{width:min(100%,680px);margin:0 auto;padding:clamp(16px,4vw,30px);display:flex;flex-direction:column;gap:15px;background:#fff;color:#1d2941}
+.unlock-first-title>span{display:inline-block;color:#686bd9;font-size:10px;font-weight:900;letter-spacing:1.2px;margin-bottom:7px}
+.unlock-first-title h1{margin:0;font:700 clamp(21px,4vw,29px)/1.2 "Space Grotesk",sans-serif;overflow-wrap:anywhere}
+.unlock-first-thumbnail{display:block;width:100%;max-height:340px;aspect-ratio:16/9;object-fit:cover;border-radius:14px;background:#eef1f7}
+.unlock-first-thumbnail-empty{display:grid;place-items:center;color:#8b95a8;font-size:34px}
+.unlock-first-status{padding:4px 0;text-align:center}
+.unlock-first-status>i{display:block;color:#e09a31;font-size:22px;margin-bottom:7px}
+.unlock-first-status strong{display:block;font-size:17px;font-weight:800;color:#202b45}
+.unlock-first-status p{margin:5px 0 0;color:#778399;font-size:12px}
+.unlock-task-list-simple{display:grid;grid-template-columns:1fr;gap:10px}
+.unlock-task-simple{min-width:0}
+.unlock-task-simple .unlock-open-btn{width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 14px;border-radius:11px;background:#eef3ff;color:#2858b9;text-decoration:none;font-size:13px;font-weight:800;border:1px solid #dce6ff}
+.unlock-task-simple .unlock-open-btn.is-complete{background:#eaf8ef;color:#21834a;border-color:#ccebd7}
+.unlock-task-simple small{display:block;margin-top:4px;text-align:center;color:#8792a6;font-size:10px}
+.unlock-first-view .unlock-progress-meta{display:flex;justify-content:space-between;align-items:center;color:#66738a;font-size:11px;font-weight:700}
+.unlock-first-view .unlock-progress-track{height:9px;border-radius:99px;background:#edf0f6;overflow:hidden}
+.unlock-first-view .unlock-progress-track>span{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#6674e8,#3f9fe8);transition:width .35s ease}
+.unlock-first-view .unlock-watch-btn{width:100%;min-height:49px;border:0;border-radius:11px;background:#6674df;color:#fff;font-size:13px;font-weight:800;cursor:pointer}
+.unlock-first-view .unlock-watch-btn:disabled{background:#aeb5c8;cursor:not-allowed}
+.unlock-first-view .unlock-watch-btn.is-ready{background:#237cce}
+.unlock-first-view .unlock-return-note{margin:0;text-align:center;color:#8a95a8;font-size:10px;line-height:1.5}
+.video-publisher-heading{padding:21px 26px 0;color:#5e63d5;font-size:12px;font-weight:900;letter-spacing:1.3px}
+.video-publisher-heading+ .video-info{padding-top:9px}
+.video-info-meta{padding-top:4px!important;padding-bottom:14px!important}
+.video-info-meta .video-metrics{margin-top:0;padding-top:12px}
+.video-social-shortcuts{display:flex;flex-wrap:wrap;gap:9px;padding:0 26px 17px}
+.video-social-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 13px;border:1px solid #e5eaf2;border-radius:9px;background:#fff;color:#46536b;text-decoration:none;font-size:11px;font-weight:800}
+.video-social-button.telegram{color:#1689d6}.video-social-button.whatsapp{color:#159447}.video-social-button.facebook{color:#1877f2}.video-social-button.youtube{color:#df2525}
+.video-gate-shell>.video-page-ad{padding-left:22px;padding-right:22px}
+.video-gate-shell>.video-stage-wrap{margin:0 22px}
+@media(max-width:560px){.unlock-first-view{padding:16px 13px;gap:13px}.unlock-first-thumbnail{border-radius:10px}.unlock-first-status strong{font-size:15px}.video-publisher-heading{padding:18px 15px 0}.video-social-shortcuts{padding:0 14px 14px;gap:7px}.video-social-button{min-height:35px;padding:7px 10px;font-size:10px}.video-gate-shell>.video-page-ad{padding-left:12px;padding-right:12px}.video-gate-shell>.video-stage-wrap{margin:0 12px}}
+.related-ad-bottom{grid-column:1/-1;display:flex;justify-content:center;align-items:center;min-width:0;overflow:hidden;padding:10px 0}
+.related-ad-bottom .ad-slot{width:min(468px,100%);min-height:60px}

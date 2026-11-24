@@ -45,55 +45,58 @@ function safeHttpUrl(value) {
 function renderPlayer(data) {
   const src = normalizeVideoSource(data.embed_url);
   if (!src) throw Error("URL video tidak valid atau format penyedia belum didukung.");
-  $("lockedPlayerArea").classList.remove("is-locked");
-  $("lockedPlayerArea").innerHTML = `<section class="video-player-wrap">
-    <div class="player-topline"><span><i class="fa-solid fa-circle-play"></i> VIDPAS VIDEO PLAYER</span><span><i class="fa-solid fa-shield-halved"></i> Akses terbuka</span></div>
-    <div class="video-player ${data.orientation === "vertical" ? "vertical" : ""}">${playerMarkup(src, data.title)}</div>
-  </section>`;
+  const stage = $("videoStage");
+  if (stage) stage.innerHTML = `<div class="player-topline"><span><i class="fa-solid fa-circle-play"></i> VIDPAS VIDEO PLAYER</span><span><i class="fa-solid fa-shield-halved"></i> Akses terbuka</span></div><div class="video-player ${data.orientation === "vertical" ? "vertical" : ""}">${playerMarkup(src, data.title)}</div>`;
+  const gate = $("lockedPlayerArea");
+  if (gate) { gate.hidden = true; gate.innerHTML = ""; }
   unlocked = true;
-  $("videoActions").classList.remove("hidden");
   const dl = $("downloadBtn");
-  if (data.download_url) {
-    dl.disabled = false;
-    dl.innerHTML = '<i class="fa-solid fa-download"></i><span>Download</span>';
-    dl.title = "Download video";
-  } else {
-    dl.disabled = true;
-    dl.innerHTML = '<i class="fa-solid fa-ban"></i><span>Download tidak tersedia</span>';
+  if (dl) {
+    if (data.download_url) {
+      dl.disabled = false;
+      dl.innerHTML = '<i class="fa-solid fa-download"></i><span>Download</span>';
+      dl.title = "Download video";
+    } else {
+      dl.disabled = true;
+      dl.innerHTML = '<i class="fa-solid fa-ban"></i><span>Download tidak tersedia</span>';
+    }
   }
-  $("downloadHint").textContent = data.download_url ? "Video sudah terbuka. Kamu bisa menonton dan mengunduh." : "Publisher belum menyediakan tautan download.";
+  const hint = $("downloadHint");
+  if (hint) hint.textContent = data.download_url ? "Video sudah terbuka. Kamu bisa menonton dan mengunduh." : "Publisher belum menyediakan tautan download.";
   startFloatingAdSchedule();
 }
+function renderLockedStage(data) {
+  const stage = $("videoStage");
+  if (!stage) return;
+  const thumb = safeHttpUrl(data.thumbnail_url);
+  stage.innerHTML = `<div class="player-topline"><span><i class="fa-solid fa-circle-play"></i> VIDPAS VIDEO PLAYER</span><span><i class="fa-solid fa-lock"></i> Akses terkunci</span></div><div class="video-stage-locked" ${thumb ? `style="--stage-thumb:url('${esc(thumb)}')"` : ""}><div class="video-stage-shade"></div><div class="video-stage-message"><i class="fa-solid fa-lock"></i><strong>Video siap ditonton</strong><span>Selesaikan tugas akses di bawah untuk membuka video.</span></div></div>`;
+}
+
 function lockedMarkup() {
   const thumb = safeHttpUrl(videoData.thumbnail_url);
-  return `<div class="unlock-gate-backdrop">
-    <div class="unlock-gate-card">
-      <div class="unlock-thumbnail-row">
-        ${thumb ? `<img src="${esc(thumb)}" alt="Thumbnail ${esc(videoData.title)}">` : `<div class="unlock-thumbnail-fallback"><i class="fa-solid fa-photo-film"></i></div>`}
-        <div class="unlock-thumbnail-caption"><span class="unlock-thumbnail-kicker">VIDPAS • VIDEO ACCESS</span><strong>${esc(videoData.title)}</strong><small><i class="fa-solid fa-lock"></i> Akses terkunci</small></div>
-      </div>
-      <div class="unlock-premium-head"><div class="unlock-premium-icon"><i class="fa-solid fa-unlock-keyhole"></i></div>
-        <div class="unlock-premium-title"><span>SUB TO UNLOCK</span><h2>Buka akses menonton</h2><p>Gabung melalui tautan resmi berikut untuk melanjutkan.</p></div>
-      </div>
-      <div class="unlock-progress-meta"><span><i class="fa-solid fa-list-check"></i> Progress tugas</span><strong id="unlockProgress">0/${tasks.length}</strong></div>
-      <div class="unlock-progress-track"><span id="unlockProgressBar"></span></div>
-      <div class="unlock-task-list ${tasks.length===1?"single-task":tasks.length===2?"two-tasks":""}" id="unlockTaskList">
-        ${tasks.map((t,i) => {
-          const p = platforms[String(t.type || "").toLowerCase()] || {name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square",tone:"generic"};
-          const complete = !!saved[i];
-          return `<article class="unlock-task-card ${complete?"is-complete":""}" id="unlockTask${i}">
-            <div class="unlock-platform-icon ${p.tone}"><i class="${p.icon}"></i></div>
-            <div class="unlock-task-copy"><strong>${esc(t.label || `Gabung ${p.name}`)}</strong><small>${complete?"Tautan dibuka":"Buka tautan tujuan"}</small></div>
-            <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer">${complete?'<i class="fa-solid fa-check"></i> Selesai':`Gabung <i class="fa-solid fa-arrow-up-right-from-square"></i>`}</a>
-          </article>`;
-        }).join("")}
-      </div>
-      <p class="unlock-return-note"><i class="fa-solid fa-circle-info"></i> Buka tautan resmi, lalu kembali ke Vidpas. Progress mencatat tautan yang dibuka, bukan memverifikasi status berlangganan.</p>
-      <button id="continueWatchBtn" class="unlock-watch-btn" type="button" disabled><i class="fa-solid fa-lock"></i> Lanjutkan menonton</button>
-      <div id="unlockCountdown" class="unlock-countdown" hidden aria-live="polite"><div class="unlock-countdown-ring"><span id="unlockCountdownNumber">3</span></div><strong>Memverifikasi akses</strong><div class="unlock-countdown-track"><span id="unlockCountdownBar"></span></div><small>Menyiapkan video untuk diputar…</small></div>
+  return `<section class="unlock-first-view">
+    <div class="unlock-first-title"><span>VIDEO TERKUNCI</span><h1>${esc(videoData.title)}</h1></div>
+    ${thumb ? `<img class="unlock-first-thumbnail" src="${esc(thumb)}" alt="Thumbnail ${esc(videoData.title)}">` : `<div class="unlock-first-thumbnail unlock-first-thumbnail-empty"><i class="fa-solid fa-photo-film"></i></div>`}
+    <div class="unlock-first-status"><i class="fa-solid fa-lock"></i><strong>Video terkunci akses</strong><p>Silahkan selesaikan tugas terlebih dahulu</p></div>
+    <div class="unlock-task-list unlock-task-list-simple" id="unlockTaskList">
+      ${tasks.map((t,i) => {
+        const p = platforms[String(t.type || "").toLowerCase()] || {name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square",tone:"generic"};
+        const complete = !!saved[i];
+        const label = t.label || (String(t.type).toLowerCase()==="telegram" ? "Join Telegram" : String(t.type).toLowerCase()==="whatsapp" ? "Gabung Saluran WhatsApp" : `Gabung ${p.name}`);
+        return `<article class="unlock-task-simple ${complete?"is-complete":""}" id="unlockTask${i}">
+          <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer"><i class="${p.icon}"></i><span>${esc(complete?"Selesai":label)}</span>${complete?'<i class="fa-solid fa-check"></i>':'<i class="fa-solid fa-arrow-up-right-from-square"></i>'}</a>
+          <small>${complete?"Tautan dibuka":"Tekan tombol untuk bergabung"}</small>
+        </article>`;
+      }).join("")}
     </div>
-  </div>`;
+    <div class="unlock-progress-meta"><span>Progress tugas</span><strong id="unlockProgress">0/${tasks.length}</strong></div>
+    <div class="unlock-progress-track"><span id="unlockProgressBar"></span></div>
+    <button id="continueWatchBtn" class="unlock-watch-btn" type="button" disabled><i class="fa-solid fa-lock"></i> Lanjut Menonton</button>
+    <p class="unlock-return-note">Selesaikan semua tugas, lalu tekan Lanjut Menonton.</p>
+    <div id="unlockCountdown" class="unlock-countdown" hidden aria-live="polite"><div class="unlock-countdown-ring"><span id="unlockCountdownNumber">3</span></div><strong>Menyiapkan video</strong><div class="unlock-countdown-track"><span id="unlockCountdownBar"></span></div></div>
+  </section>`;
 }
+
 function refreshTaskProgress() {
   const count = tasks.filter((_,i) => !!saved[i]).length;
   const total = tasks.length;
@@ -208,8 +211,8 @@ async function verifyAndUnlock() {
     videoData.embed_url = result.embed_url;
     videoData.download_url = result.download_url || "";
     countdown.hidden = true;
-    renderPlayer(videoData);
-    const area = $("lockedPlayerArea");
+    buildUnlockedPage(videoData);
+    const area = $("videoStage");
     if (area) area.scrollIntoView({ behavior: "smooth", block: "center" });
   } catch (e) {
     countdown.hidden = true;
@@ -240,7 +243,7 @@ function renderRelated() {
     }
     return all;
   })().then(all => {
-    const items = shuffle(all.filter(v => v.slug !== slug)).slice(0,10);
+    const items = shuffle(all.filter(v => v.slug !== slug)).slice(0,8);
     if (!items.length) { grid.classList.add("hidden"); empty.classList.remove("hidden"); return; }
     grid.classList.remove("hidden"); empty.classList.add("hidden");
     const card = v => `<a class="related-card" href="/v/${encodeURIComponent(v.slug)}">
@@ -248,14 +251,11 @@ function renderRelated() {
       <div class="related-copy"><h3>${esc(v.title)}</h3><p><i class="fa-regular fa-eye"></i> ${Number(v.views||0).toLocaleString("id-ID")} views</p></div></a>`;
     const first = items.slice(0,2).map(card).join("");
     const middle = items.slice(2,6).map(card).join("");
-    const last = items.slice(6,10).map(card).join("");
-    grid.innerHTML = `${first}<div class="related-ad related-ad-tall"><div id="relatedBanner160" class="ad-slot ad-160x600"></div></div>${middle}<div class="related-ad related-ad-native"><div id="relatedNativeAd" class="ad-slot"></div></div><div class="related-ad related-ad-square"><div id="relatedBanner300" class="ad-slot ad-300x250"></div></div>${last}<div class="related-ad related-ad-bottom"><div id="relatedBanner468" class="ad-slot ad-468x60"></div></div><div class="related-ad related-ad-leaderboard"><div id="relatedBanner728" class="ad-slot ad-728x90"></div></div>`;
-    // Queue display units five seconds apart instead of stacking all placements at once.
-    queueAd(() => loadAdsterraBanner("relatedBanner160","1057b25ea9554d63c48eb6f8a07b782b",160,600,"https://biomanos.org/22/1057b25ea9554d63c48eb6f8a07b782b"));
-    queueAd(() => loadNativeAd("relatedNativeAd"));
+    const last = items.slice(6,8).map(card).join("");
+    grid.innerHTML = `${first}<div class="related-ad related-ad-square"><div id="relatedBanner300" class="ad-slot ad-300x250"></div></div>${middle}<div class="related-ad related-ad-bottom"><div id="relatedBanner468" class="ad-slot ad-468x60"></div></div>${last}`;
+    // Banner placements follow the requested groups: after videos 1–2 and 5–6.
     queueAd(() => loadAdsterraBanner("relatedBanner300","100bd0c6cfd6cedb608b2e083620df0e",300,250,"https://biomanos.org/22/100bd0c6cfd6cedb608b2e083620df0e"));
     queueAd(() => loadAdsterraBanner("relatedBanner468","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd"));
-    queueAd(() => loadAdsterraBanner("relatedBanner728","a0c724147631738be4791be58f8fbaed",728,90,"https://biomanos.org/22/a0c724147631738be4791be58f8fbaed"));
   }).catch(e => { console.warn("Related videos:",e); grid.classList.add("hidden"); empty.classList.remove("hidden"); });
 }
 
@@ -386,7 +386,11 @@ function setupActionButtons(data) {
     likeBtn.disabled = true;
     try {
       const result = await action("like");
-      if (result && typeof result.likes === "number") $("likeCount").textContent = result.likes.toLocaleString("id-ID");
+      if (result && typeof result.likes === "number") {
+        $("likeCount").textContent = result.likes.toLocaleString("id-ID");
+        const buttonCount = $("likeButtonCount");
+        if (buttonCount) buttonCount.textContent = result.likes.toLocaleString("id-ID");
+      }
       likeBtn.dataset.liked = "true";
       localStorage.setItem(likedKey,"1");
       likeBtn.classList.add("is-liked");
@@ -406,28 +410,49 @@ function setupActionButtons(data) {
     window.open(data.download_url,"_blank","noopener");
   };
 }
+function buildLockedPage(data) {
+  videoData = data;
+  root.innerHTML = `<div class="video-gate-shell"><div id="lockedPlayerArea" class="locked-player-area is-locked">${lockedMarkup()}</div></div>`;
+  const related = $("relatedSection");
+  if (related) related.hidden = true;
+  mountUnlockGate();
+}
+function buildUnlockedPage(data) {
+  videoData = data;
+  unlocked = false;
+  root.innerHTML = `<section class="video-gate-shell">
+    <header class="video-publisher-heading"><span>VIDEO VIDPAS</span></header>
+    <section class="video-info"><div class="video-info-main"><h1>${esc(data.title)}</h1><p class="video-description">${esc(data.description || "Belum ada deskripsi untuk video ini.")}</p></div></section>
+    <div class="video-page-ad video-top-ad"><div class="ad-caption">Advertisement</div><div id="topBannerSlot" class="ad-slot ad-728x90"></div></div>
+    <section class="video-stage-wrap" id="videoStage"><div class="video-player-loading"><span class="loading-spinner"></span></div></section>
+    <div class="video-page-ad video-mid-ad"><div class="ad-caption">Advertisement</div><div id="midBannerSlot" class="ad-slot ad-468x60"></div></div>
+    <section class="video-info video-info-meta"><div class="video-info-main"><div class="video-metrics"><span><i class="fa-regular fa-eye"></i><b>${Number(data.views||0).toLocaleString("id-ID")}</b> views</span><span><i class="fa-solid fa-heart"></i><b id="likeCount">${Number(data.likes||0).toLocaleString("id-ID")}</b> likes</span><span><i class="fa-solid fa-calendar-days"></i>${data.created_at?new Date(data.created_at).toLocaleDateString("id-ID"):"Vidpas"}</span></div></div></section>
+    <section class="video-actions-panel" id="videoActions"><div class="video-actions-row">
+      <button class="video-action-btn like" id="likeBtn" type="button"><i class="fa-regular fa-heart"></i><span>Like</span><b id="likeButtonCount">${Number(data.likes||0).toLocaleString("id-ID")}</b></button>
+      <button class="video-action-btn download" id="downloadBtn" type="button" disabled><i class="fa-solid fa-download"></i><span>Download tidak tersedia</span></button>
+      <button class="video-action-btn" id="shareBtn" type="button"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
+    </div><p class="actions-hint" id="downloadHint">${data.download_url ? "Video sudah terbuka. Kamu bisa menonton dan mengunduh." : "Publisher belum menyediakan tautan download."}</p></section>
+    <div class="video-social-shortcuts">${tasks.map(t=>{const p=platforms[String(t.type||"").toLowerCase()]||{name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square",tone:"generic"};return `<a class="video-social-button ${p.tone}" href="${esc(t.url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(p.name)}"><i class="${p.icon}"></i><span>${esc(p.name)}</span></a>`;}).join("")}</div>
+    <div class="video-page-ad video-unlock-ad"><div class="ad-caption">Advertisement</div><div id="unlockBannerSlot" class="ad-slot ad-300x250"></div></div>
+  </section>`;
+  const related = $("relatedSection");
+  if (related) related.hidden = false;
+  renderPlayer(data);
+  setupActionButtons(data);
+  queueAd(() => loadAdsterraBanner("topBannerSlot","a0c724147631738be4791be58f8fbaed",728,90,"https://biomanos.org/22/a0c724147631738be4791be58f8fbaed"));
+  queueAd(() => loadAdsterraBanner("midBannerSlot","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd"));
+  queueAd(() => loadAdsterraBanner("unlockBannerSlot","100bd0c6cfd6cedb608b2e083620df0e",300,250,"https://biomanos.org/22/100bd0c6cfd6cedb608b2e083620df0e"));
+  renderRelated();
+}
 function buildPage(data) {
   videoData = data;
   tasks = Array.isArray(data.unlock_tasks) ? data.unlock_tasks.filter(t => t && safeHttpUrl(t.url)) : [];
   saved = savedTasks();
   document.title = `${data.title} — Vidpas`;
-  root.innerHTML = `<section class="video-gate-shell">
-    <section class="video-info"><div class="video-info-main"><div class="video-label"><i class="fa-solid fa-film"></i> VIDEO PUBLISHER</div><h1>${esc(data.title)}</h1><p class="video-description">${esc(data.description || "Belum ada deskripsi untuk video ini.")}</p><div class="video-metrics"><span><i class="fa-regular fa-eye"></i><b>${Number(data.views||0).toLocaleString("id-ID")}</b> views</span><span><i class="fa-solid fa-heart"></i><b>${Number(data.likes||0).toLocaleString("id-ID")}</b> likes</span><span><i class="fa-solid fa-calendar-days"></i>${data.created_at?new Date(data.created_at).toLocaleDateString("id-ID"):"Vidpas"}</span></div></div></section>
-    <section class="video-actions-panel" id="videoActions"><div class="video-actions-row">
-      <button class="video-action-btn like" id="likeBtn" type="button"><i class="fa-regular fa-heart"></i><span>Like</span><b id="likeCount">${Number(data.likes||0).toLocaleString("id-ID")}</b></button>
-      <button class="video-action-btn download" id="downloadBtn" type="button" disabled><i class="fa-solid fa-download"></i><span>Download</span></button>
-      <button class="video-action-btn" id="shareBtn" type="button"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
-    </div><p class="actions-hint" id="downloadHint">${tasks.length ? "Buka tautan tugas di bawah untuk membuka akses menonton." : "Menyiapkan video…"}</p></section>
-    <div id="lockedPlayerArea" class="locked-player-area ${tasks.length?"is-locked":""}"></div>
-  </section>`;
-  if (tasks.length) mountUnlockGate();
-  else {
-    renderPlayer(data);
-    $("videoActions").classList.remove("hidden");
-  }
-  setupActionButtons(data);
-  renderRelated();
+  if (tasks.length) return buildLockedPage(data);
+  buildUnlockedPage(data);
 }
+
 (async () => {
   try {
     loadSocialBar();
