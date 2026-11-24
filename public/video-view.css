@@ -256,3 +256,44 @@
  .video-slide-ad.ad-from-left{left:0;max-width:calc(100vw - 8px)}
  .video-slide-ad.ad-from-right{right:0;max-width:calc(100vw - 8px)}
 }
+
+
+/* Ad display cleanup: transparent wrappers, only the provider banner remains visible. */
+.video-page-ad,
+.video-top-ad,
+.video-mid-ad,
+.video-unlock-ad,
+.related-ad {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 12px auto !important;
+  overflow: visible !important;
+}
+.video-page-ad .ad-caption { display: none !important; }
+.video-page-ad .ad-slot,
+.related-ad .ad-slot,
+.video-slide-ad .ad-slot {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.video-page-ad .ad-slot iframe,
+.related-ad .ad-slot iframe,
+.video-slide-ad .ad-slot iframe {
+  display: block;
+  border: 0 !important;
+  background: transparent !important;
+}
+.video-slide-ad,
+.video-floating-ad {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}

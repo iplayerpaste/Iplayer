@@ -18,7 +18,8 @@ const pageEnteredAt = Date.now();
 async function api(path, options = {}) {
   const r = await fetch(`/api${path}`, {
     credentials:"include",
-    headers:{"Content-Type":"application/json", ...(options.headers || {})},
+    cache:"no-store",
+    headers:{"Content-Type":"application/json", "Cache-Control":"no-cache", ...(options.headers || {})},
     ...options
   });
   const d = await r.json().catch(() => ({}));
@@ -298,7 +299,7 @@ function loadAdsterraBanner(slotId,key,width,height,src) {
   frame.title = "Iklan";
   frame.width = String(width);
   frame.height = String(height);
-  frame.loading = "lazy";
+  frame.loading = "eager";
   frame.referrerPolicy = "strict-origin-when-cross-origin";
   frame.setAttribute("allow","autoplay; fullscreen; clipboard-write");
   frame.style.cssText = `display:block;border:0;max-width:100%;width:${width}px;height:${height}px;background:transparent;overflow:hidden`;
@@ -312,7 +313,7 @@ function loadNativeAd(slotId) {
   slot.dataset.loaded = "1";
   const frame = document.createElement("iframe");
   frame.title = "Iklan";
-  frame.loading = "lazy";
+  frame.loading = "eager";
   frame.style.cssText = "display:block;width:min(100%,720px);height:180px;border:0;background:transparent;overflow:hidden";
   frame.setAttribute("allow","autoplay; fullscreen; clipboard-write");
   frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0"><div id="container-c4ddd55dc2405990669cdc39190e71f0"></div><script async fetchpriority="high" data-cfasync="false" src="https://biomanos.org/21/c4ddd55dc2405990669cdc39190e71f0"></script></body></html>`;
@@ -332,11 +333,8 @@ function loadSocialBar() {
 // Load the popunder provider once at page start. The provider controls its own
 // genuine user-gesture rules; Vidpas does not synthesize clicks or force repeats.
 function setupPopunder() {
-  // Frequency cap: do not reload the popunder on every refresh or navigation.
-  try {
-    if (sessionStorage.getItem("vidpas-popunder-loaded") === "1") return;
-    sessionStorage.setItem("vidpas-popunder-loaded", "1");
-  } catch { /* Continue with provider's own frequency controls if storage is unavailable. */ }
+  // Load the provider once per page view. Frequency and user-gesture limits
+  // remain controlled by Adsterra; Vidpas never fabricates clicks or popups.
   if (document.querySelector('script[data-vidpas-popunder]')) return;
   const script = document.createElement("script");
   script.setAttribute("data-cfasync", "false");
@@ -382,7 +380,9 @@ function startSlideAd() {
   const show = () => showSlideAd(panel);
   window.setTimeout(show, 5000);
   // 15 seconds visible, then a quiet gap; cycle through all five entry motions.
-  panel._cycleTimer = window.setInterval(() => { if (panel.hidden) show(); }, 45000);
+  panel._cycleTimer = window.setInterval(() => {
+    if (panel.hidden && document.visibilityState === "visible") show();
+  }, 45000);
   $("hideSlideAd").onclick = () => {
     window.clearTimeout(panel._hideTimer);
     panel.classList.add("is-hiding");
@@ -490,6 +490,12 @@ function buildPage(data) {
   if (tasks.length) return buildLockedPage(data);
   buildUnlockedPage(data);
 }
+
+// A page restored from the browser back/forward cache is not a fresh JS load.
+// Reload it so Sub to Unlock always starts at 0 after returning to the page.
+window.addEventListener("pageshow", event => {
+  if (event.persisted) window.location.reload();
+});
 
 (async () => {
   try {
