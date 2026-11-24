@@ -46,7 +46,7 @@ async function route(req,env,url){
    }
    return json({ok:true,service:"Vidpas API",database:"connected",release:"vidpas-pbkdf2-100k-r2",pbkdf2_iterations:PASSWORD_HASH_ITERATIONS,checks:{pastes:"ok",videos:"ok"}});
   }
- if(p==="/settings"&&m==="GET"){const s=await settings(env);return json({site_name:s.site_name||"Vidpas",telegram_url:s.telegram_url||"",whatsapp_url:s.whatsapp_url||"",facebook_url:s.facebook_url||"",youtube_url:s.youtube_url||""})}
+ if(p==="/settings"&&m==="GET"){const s=await settings(env);return json({site_name:s.site_name||"Vidpas",telegram_url:s.telegram_url||"",whatsapp_url:s.whatsapp_url||"",facebook_url:s.facebook_url||"",youtube_url:s.youtube_url||"",video_telegram_url:s.video_telegram_url||"https://t.me/vidpas",video_whatsapp_url:s.video_whatsapp_url||"https://whatsapp.com/channel/0029VbEU8HWIt5rxVZ1eFg3c"})}
  if(p==="/pastes"&&m==="POST"){
   const b=await body(req);if(typeof b.content!=="string"||!b.content.trim()||b.content.length>100000)return err("Isi paste wajib diisi (maksimal 100 KB).");
   const slug=random(9),salt=random(16),password_hash=b.password?`${salt}:${await hashPassword(b.password,salt)}`:null;
@@ -92,17 +92,34 @@ async function route(req,env,url){
  const posterMatch=p.match(/^\/posters\/([a-zA-Z0-9_-]+)$/);
  if(posterMatch&&m==="GET") {const rows=await db(env,`posters?slug=eq.${encodeURIComponent(posterMatch[1])}&published=eq.true&select=slug,title,description,image_url,target_url,author,views,created_at`);if(!rows.length)return err("Poster tidak ditemukan.",404);const x=rows[0];await db(env,`posters?slug=eq.${encodeURIComponent(x.slug)}`,{method:"PATCH",body:JSON.stringify({views:(x.views||0)+1})});return json({...x,views:(x.views||0)+1});}
  if(p==="/videos"&&m==="GET"){
-  const limit=Math.min(20,Math.max(1,Number(url.searchParams.get("limit"))||20)); const offset=Math.max(0,Number(url.searchParams.get("offset"))||0);
-  const rows=await db(env,`videos?published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,created_at&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
-  const items=rows.slice(0,limit).map(x=>({...x,downloads:0,shares:0,likes:0}));const totalRows=await db(env,"videos?published=eq.true&select=id");return json({items,total:totalRows.length,has_more:rows.length>limit});
+  const limit=Math.min(1000,Math.max(1,Number(url.searchParams.get("limit"))||20)); const offset=Math.max(0,Number(url.searchParams.get("offset"))||0);
+  const rows=await db(env,`videos?published=eq.true&select=slug,title,description,thumbnail_url,orientation,views,likes,downloads,shares,created_at&order=created_at.desc&limit=${limit+1}&offset=${offset}`);
+  const items=rows.slice(0,limit).map(x=>({...x,downloads:x.downloads||0,shares:x.shares||0,likes:x.likes||0}));const totalRows=await db(env,"videos?published=eq.true&select=id");return json({items,total:totalRows.length,has_more:rows.length>limit});
  }
  const videoMatch=p.match(/^\/videos\/([a-zA-Z0-9_-]+)$/);
  if(videoMatch&&m==="GET"){
-  const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoMatch[1])}&published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,created_at`);
+  const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoMatch[1])}&published=eq.true&select=slug,title,description,embed_url,thumbnail_url,orientation,download_url,unlock_tasks,views,likes,downloads,shares,created_at`);
   if(!rows.length)return err("Video tidak ditemukan.",404);
   const x=rows[0]; await db(env,`videos?slug=eq.${encodeURIComponent(x.slug)}`,{method:"PATCH",body:JSON.stringify({views:(x.views||0)+1})});
-  return json({...x,views:(x.views||0)+1});
+  const gated=Array.isArray(x.unlock_tasks)&&x.unlock_tasks.some(t=>t&&t.url);
+  return json({...x,embed_url:gated?null:x.embed_url,download_url:gated?null:x.download_url,views:(x.views||0)+1});
  }
+  const videoUnlock=p.match(/^\/videos\/([a-zA-Z0-9_-]+)\/unlock$/);
+  if(videoUnlock&&m==="POST"){
+   const b=await body(req);
+   const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoUnlock[1])}&published=eq.true&select=slug,embed_url,download_url,unlock_tasks`);
+   if(!rows.length)return err("Video tidak ditemukan.",404);
+   const x=rows[0];
+   const tasks=Array.isArray(x.unlock_tasks)?x.unlock_tasks.filter(t=>{
+    if(!t||typeof t.url!=="string")return false;
+    try{const u=new URL(t.url);return u.protocol==="https:"||u.protocol==="http:"}catch{return false}
+   }):[];
+   const completed=Array.isArray(b.completed_tasks)?[...new Set(b.completed_tasks.map(Number).filter(Number.isInteger))]:[];
+   const allCompleted=tasks.every((_,i)=>completed.includes(i));
+   if(tasks.length&&!allCompleted)return err("Selesaikan seluruh tugas terlebih dahulu.",403);
+   if(!x.embed_url)return err("URL embed video belum tersedia.",409);
+   return json({ok:true,embed_url:x.embed_url,download_url:x.download_url||"",unlocked:true},200,{"Cache-Control":"no-store"});
+  }
  const videoAction=p.match(/^\/videos\/([a-zA-Z0-9_-]+)\/action$/);
  if(videoAction&&m==="POST"){const b=await body(req),field={download:"downloads",share:"shares",like:"likes"}[b.action];if(!field)return err("Aksi tidak valid.");const rows=await db(env,`videos?slug=eq.${encodeURIComponent(videoAction[1])}&published=eq.true&select=id,${field}`);if(!rows.length)return err("Video tidak ditemukan.",404);const value=(rows[0][field]||0)+1;await db(env,`videos?id=eq.${rows[0].id}`,{method:"PATCH",body:JSON.stringify({[field]:value})});return json({[field]:value});}
 
@@ -122,7 +139,7 @@ async function route(req,env,url){
  if(p.startsWith("/admin/")){if(!await requireAdmin(req,env))return err("Akses admin diperlukan.",401);
   if(p==="/admin/dashboard"&&m==="GET"){const rows=await db(env,"pastes?select=visibility,views,expires_at");const videos=await db(env,"videos?select=id,views,downloads,shares,likes");const posters=await db(env,"posters?select=id,views");const online=await db(env,`online_presence?last_seen=gt.${encodeURIComponent(new Date(Date.now()-120000).toISOString())}&select=visitor_id`);return json({total_pastes:rows.length,public_pastes:rows.filter(x=>x.visibility==="public").length,total_views:rows.reduce((a,x)=>a+(x.views||0),0),total_videos:videos.length,video_views:videos.reduce((a,x)=>a+(x.views||0),0),video_downloads:videos.reduce((a,x)=>a+(x.downloads||0),0),video_shares:videos.reduce((a,x)=>a+(x.shares||0),0),video_likes:videos.reduce((a,x)=>a+(x.likes||0),0),total_posters:posters.length,poster_views:posters.reduce((a,x)=>a+(x.views||0),0),online_now:online.length})}
   if(p==="/admin/settings"&&m==="GET")return json(await settings(env));
-  if(p==="/admin/settings"&&m==="PUT"){const b=await body(req);for(const [key,value] of Object.entries({telegram_url:b.telegram_url,whatsapp_url:b.whatsapp_url,facebook_url:b.facebook_url,youtube_url:b.youtube_url,site_name:b.site_name})){if(value!==undefined)await db(env,"site_settings?on_conflict=key",{method:"POST",prefer:"resolution=merge-duplicates,return=representation",body:JSON.stringify({key,value})})}await log(env,"settings_updated");return json({ok:true})}
+  if(p==="/admin/settings"&&m==="PUT"){const b=await body(req);for(const key of ["video_telegram_url","video_whatsapp_url"]){if(b[key]){try{const u=new URL(String(b[key]));if(!["http:","https:"].includes(u.protocol))throw Error();b[key]=u.href}catch{return err(`URL ${key==="video_telegram_url"?"Telegram":"WhatsApp"} tidak valid.`)}}}for(const [key,value] of Object.entries({telegram_url:b.telegram_url,whatsapp_url:b.whatsapp_url,facebook_url:b.facebook_url,youtube_url:b.youtube_url,site_name:b.site_name,video_telegram_url:b.video_telegram_url,video_whatsapp_url:b.video_whatsapp_url})){if(value!==undefined)await db(env,"site_settings?on_conflict=key",{method:"POST",prefer:"resolution=merge-duplicates,return=representation",body:JSON.stringify({key,value})})}await log(env,"settings_updated");return json({ok:true})}
   if(p==="/admin/ads"&&m==="GET")return json({items:await db(env,"ads?select=id,name,placement,ad_type,size,active,created_at&order=created_at.desc")});
   if(p==="/admin/ads"&&m==="POST"){const b=await body(req);if(!b.name||!b.script||b.script.length>30000)return err("Nama dan script iklan wajib diisi.");const placements=["site_all","paste_top","paste_middle","paste_bottom","video_top","video_bottom","explore_top","explore_grid","navbar","home"];const types=["popunder","social_bar","native","video_ads","banner","smartlink"];if(!placements.includes(b.placement)||!types.includes(b.ad_type||"banner"))return err("Format atau posisi iklan tidak valid.");const rows=await db(env,"ads",{method:"POST",body:JSON.stringify({name:String(b.name).slice(0,80),placement:b.placement,ad_type:b.ad_type||"banner",size:String(b.size||"responsive"),script:b.script,active:true})});await log(env,"ad_created",{name:b.name});return json({item:rows[0]},201)}
   const ad=p.match(/^\/admin\/ads\/([0-9a-f-]+)$/);
@@ -135,7 +152,19 @@ async function route(req,env,url){
    const slug=random(8);const rows=await db(env,"videos",{method:"POST",body:JSON.stringify({slug,title:String(b.title).slice(0,160),description:String(b.description||"").slice(0,5000),embed_url:u.href,thumbnail_url:String(b.thumbnail_url||"").slice(0,1000),orientation:b.orientation==="vertical"?"vertical":"horizontal",download_url:String(b.download_url||"").slice(0,1000),unlock_tasks:Array.isArray(b.unlock_tasks)?b.unlock_tasks.slice(0,5):[],published:b.published!==false})});await log(env,"video_created",{slug});return json({item:rows[0],url:`${env.SITE_ORIGIN||url.origin}/v/${slug}`},201);
   }
   const vm=p.match(/^\/admin\/videos\/([0-9a-f-]+)$/);
-  if(vm&&m==="PATCH"){const b=await body(req);const patch={};for(const k of ["title","description","embed_url","thumbnail_url","orientation","download_url","unlock_tasks","published"])if(b[k]!==undefined)patch[k]=b[k];await db(env,`videos?id=eq.${vm[1]}`,{method:"PATCH",body:JSON.stringify(patch)});return json({ok:true})}
+  if(vm&&m==="PATCH"){
+   const b=await body(req),patch={};
+   for(const k of ["title","description","embed_url","thumbnail_url","orientation","download_url","unlock_tasks","published"])if(b[k]!==undefined)patch[k]=b[k];
+   if(patch.title!==undefined&&!String(patch.title).trim())return err("Judul video wajib diisi.");
+   if(patch.embed_url!==undefined){try{const u=new URL(String(patch.embed_url));if(!["https:","http:"].includes(u.protocol))throw Error();patch.embed_url=u.href}catch{return err("URL embed tidak valid.")}}
+   for(const k of ["thumbnail_url","download_url"])if(patch[k]){try{const u=new URL(String(patch[k]));if(!["https:","http:"].includes(u.protocol))throw Error();patch[k]=u.href}catch{return err(`URL ${k==="thumbnail_url"?"thumbnail":"download"} tidak valid.`)}}
+   if(patch.orientation!==undefined)patch.orientation=patch.orientation==="vertical"?"vertical":"horizontal";
+   if(patch.unlock_tasks!==undefined){
+    if(!Array.isArray(patch.unlock_tasks)||patch.unlock_tasks.length>5)return err("Maksimal 5 tugas Sub to Unlock.");
+    for(const task of patch.unlock_tasks){try{const u=new URL(String(task.url||""));if(!["https:","http:"].includes(u.protocol))throw Error();task.url=u.href}catch{return err("Salah satu link Sub to Unlock tidak valid.")}}
+   }
+   await db(env,`videos?id=eq.${vm[1]}`,{method:"PATCH",body:JSON.stringify(patch)});return json({ok:true})
+  }
   if(vm&&m==="DELETE"){await db(env,`videos?id=eq.${vm[1]}`,{method:"DELETE"});return json({ok:true})}
   if(p==="/admin/posters"&&m==="GET")return json({items:await db(env,"posters?select=*&order=created_at.desc")});
   const pm=p.match(/^\/admin\/posters\/([0-9a-f-]+)$/);
