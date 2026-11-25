@@ -174,3 +174,6 @@ BEGIN
   END LOOP;
 END
 $$;
+
+alter table public.pastes
+add column if not exists dislikes bigint not null default 0;
