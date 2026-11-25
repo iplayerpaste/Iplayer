@@ -63,8 +63,8 @@ function platformAppHref(type, value) {
     if (kind === "youtube" && /(^|\.)youtube\.com$|youtu\.be$/i.test(u.hostname)) {
       u.searchParams.set("sub_confirmation", "1");
     }
-    // Android Chrome intent links request the native app, with the exact admin
-    // URL as fallback when the app is not installed or the intent is rejected.
+    // Use Android's package intent for app-first routing. Keep the exact admin
+    // HTTPS destination as fallback so the task always reaches its configured target.
     const pkg = ANDROID_APP_PACKAGES[kind];
     if (/Android/i.test(navigator.userAgent) && pkg) {
       const fallback = encodeURIComponent(u.href);
@@ -74,6 +74,24 @@ function platformAppHref(type, value) {
     return u.href;
   } catch { return url; }
 }
+function taskNativeDeepLink(type, value) {
+  const kind = String(type || "").toLowerCase();
+  const url = safeHttpUrl(value);
+  if (!url) return "";
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split("/").filter(Boolean);
+    if (kind === "telegram" && /(^|\.)t\.me$|telegram\.me$/i.test(u.hostname)) {
+      const first = parts[0] || "";
+      if (first.startsWith("+") ) return `tg://join?invite=${encodeURIComponent(first.slice(1))}`;
+      if (first.toLowerCase() === "joinchat" && parts[1]) return `tg://join?invite=${encodeURIComponent(parts[1])}`;
+      if (first && first.toLowerCase() !== "c") return `tg://resolve?domain=${encodeURIComponent(first.replace(/^@/, ""))}`;
+    }
+    if (/Android/i.test(navigator.userAgent) && ANDROID_APP_PACKAGES[kind]) return platformAppHref(kind, url);
+    return u.href;
+  } catch { return url; }
+}
+
 function taskAccountText(type, value) {
   const kind = String(type || "").toLowerCase();
   try {
@@ -137,7 +155,7 @@ function lockedMarkup() {
         const complete = !!saved[i];
         const label = t.label || (String(t.type).toLowerCase()==="telegram" ? "Join Telegram" : String(t.type).toLowerCase()==="whatsapp" ? "Gabung Saluran WhatsApp" : `Gabung ${p.name}`);
         return `<article class="unlock-task-simple ${complete?"is-complete":""}" id="unlockTask${i}">
-          <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(platformAppHref(t.type,t.url))}" target="_blank" rel="noopener noreferrer"><i class="${p.icon}" aria-hidden="true"></i><span>${esc(complete?"Selesai":label)}</span>${complete?'<i class="fa-solid fa-check"></i>':'<i class="fa-solid fa-arrow-up-right-from-square"></i>'}</a>
+          <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(platformAppHref(t.type,t.url))}" target="_self" rel="noopener noreferrer"><i class="${p.icon}" aria-hidden="true"></i><span>${esc(complete?"Selesai":label)}</span>${complete?'<i class="fa-solid fa-check"></i>':'<i class="fa-solid fa-arrow-up-right-from-square"></i>'}</a>
           <small>${esc(taskAccountText(t.type,t.url))}</small>
         </article>`;
       }).join("")}
@@ -145,7 +163,7 @@ function lockedMarkup() {
     <div class="unlock-progress-meta"><span>Progress tugas</span><strong id="unlockProgress">0/${tasks.length}</strong></div>
     <div class="unlock-progress-track"><span id="unlockProgressBar"></span></div>
     <button id="continueWatchBtn" class="unlock-watch-btn" type="button" disabled><i class="fa-solid fa-lock"></i> Lanjut Menonton</button>
-    <p class="unlock-return-note">Selesaikan semua tugas, lalu tekan Lanjut Menonton.</p>
+    <p class="unlock-return-note">Klik tugas untuk membuka aplikasi atau tujuan yang tersedia. Setelah selesai, kembali ke Vidpas untuk memperbarui progress.</p>
     <div id="unlockCountdown" class="unlock-countdown" hidden aria-live="polite"><div class="unlock-countdown-ring"><span id="unlockCountdownNumber">3</span></div><strong>Menyiapkan video</strong><div class="unlock-countdown-track"><span id="unlockCountdownBar"></span></div></div>
   </section>`;
 }
@@ -184,38 +202,62 @@ function mountUnlockGate() {
   area.classList.add("is-locked");
   area.innerHTML = lockedMarkup();
   area.querySelectorAll("[data-open-task]").forEach(a => {
-    a.addEventListener("click", () => {
+    a.addEventListener("click", event => {
+      event.preventDefault();
       const index = Number(a.dataset.openTask);
       if (saved[index]) return;
+      const task = tasks[index];
+      const webUrl = safeHttpUrl(task?.url);
+      if (!webUrl) return;
+
       a.dataset.pending = "1";
       a.classList.add("is-pending");
-      const card = $(`unlockTask${index}`);
-      if (card) card.querySelector("small").textContent = "Menunggu kamu kembali ke Vidpas…";
+      const card = $( `unlockTask${index}` );
+      if (card) card.classList.add("is-opening-app");
+
       let left = false;
-      const mark = () => {
-        if (!left || document.visibilityState === "hidden" || saved[index]) return;
+      let completed = false;
+      const cleanup = () => {
+        window.removeEventListener("focus", onFocus);
+        window.removeEventListener("pagehide", onPageHide);
+        document.removeEventListener("visibilitychange", onVisibility);
+      };
+      const markReturned = () => {
+        if (!left || document.visibilityState !== "visible" || completed || saved[index]) return;
+        completed = true;
         saved[index] = true;
+        a.dataset.pending = "0";
+        a.classList.remove("is-pending");
+        if (card) card.classList.remove("is-opening-app");
         storeTasks();
         refreshTaskProgress();
-        window.removeEventListener("focus", mark);
-        document.removeEventListener("visibilitychange", onVisibility);
+        cleanup();
       };
       const onVisibility = () => {
         if (document.visibilityState === "hidden") left = true;
-        else mark();
+        else markReturned();
       };
-      window.addEventListener("blur", () => { left = true; }, {once:true});
-      window.addEventListener("focus", mark);
+      const onPageHide = () => { left = true; };
+      const onFocus = () => markReturned();
       document.addEventListener("visibilitychange", onVisibility);
-      // Some mobile browsers keep the same tab focused while an external app opens.
-      setTimeout(() => { if (document.visibilityState === "visible" && document.hasFocus() && a.dataset.pending === "1") {
-        // Do not mark on the click itself; require a real focus/visibility round trip.
-      } }, 800);
+      window.addEventListener("pagehide", onPageHide, {once:true});
+      window.addEventListener("focus", onFocus);
+
+      // Trigger the app URI synchronously in the user's click gesture. If the
+      // app does not open and the page stays visible, navigate to the HTTPS URL.
+      const appUrl = taskNativeDeepLink(task.type, webUrl) || platformAppHref(task.type, webUrl);
+      window.location.href = appUrl;
+      window.setTimeout(() => {
+        if (!completed && document.visibilityState === "visible" && document.hasFocus()) {
+          window.location.href = webUrl;
+        }
+      }, 1800);
     });
   });
   $("continueWatchBtn").addEventListener("click", verifyAndUnlock);
   refreshTaskProgress();
 }
+
 async function verifyAndUnlock() {
   const btn = $("continueWatchBtn");
   if (!btn || btn.disabled || unlocked) return;
