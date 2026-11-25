@@ -2,30 +2,30 @@
 <html lang="id">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f7f8fc">
-<meta name="description" content="Lihat Pasteling yang dibagikan di Vidpas.">
-<title>View Pasteling — Vidpas</title>
+<meta name="theme-color" content="#f5f7fb">
+<meta name="description" content="Pastelink aman dan praktis — Vidpaste.">
+<title>Pastelink — Vidpaste</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/paste-view.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"><link rel="stylesheet" href="/navbar.css">
-<link rel="icon" href="/images/favicon.ico" sizes="any"><link rel="icon" type="image/png" href="/images/favicon.png" sizes="512x512">
+<link rel="icon" href="/images/favicon.ico" sizes="any">
 </head>
 <body>
 <div id="siteNavbar"></div>
-<main class="shell paste-view-shell">
-  <section class="view-heading"><span class="eyebrow muted"><i class="fa-solid fa-file-lines"></i> PASTELING VIEWER</span><h1>Pasteling</h1><p>Konten yang dibagikan melalui Vidpas.</p></section>
-  <section id="reader" class="paste-reader panel" aria-live="polite"><div class="view-loading"><i class="fa-solid fa-spinner fa-spin"></i><span>Memuat Pasteling…</span></div></section>
-  <div class="view-back"><a class="button secondary" href="/explore-paste"><i class="fa-solid fa-compass"></i> Explore Pasteling</a><a class="button ghost" href="/paste"><i class="fa-solid fa-plus"></i> Buat Pasteling</a></div>
+<main class="pv-shell">
+  <div class="pv-breadcrumb"><a href="/"><i class="fa-solid fa-house"></i> Beranda</a><i class="fa-solid fa-chevron-right"></i><span>Pastelink</span></div>
+  <section id="reader" class="pv-reader" aria-live="polite">
+    <div class="pv-loading" id="initialLoading">
+      <div class="pv-loader-ring"><i class="fa-solid fa-link"></i></div>
+      <span class="pv-kicker">SECURE CONTENT DELIVERY</span>
+      <h1 id="loadingTitle">Memproses....</h1>
+      <p id="loadingDescription">Menyiapkan halaman Pastelink untuk Anda.</p>
+      <div class="pv-progress"><span id="loadingBar"></span></div>
+      <div class="pv-loading-foot"><span><i class="fa-solid fa-shield-halved"></i> Koneksi aman</span><b id="loadingPercent">0%</b></div>
+    </div>
+  </section>
 </main>
-<dialog id="passwordDialog" class="dialog password-dialog">
-<form id="passwordForm">
-<button class="dialog-close" type="button" id="closePassword" aria-label="Tutup">×</button>
-<div class="dialog-icon"><i class="fa-solid fa-lock"></i></div><h2>Pasteling dilindungi password</h2><p>Masukkan password untuk melanjutkan.</p>
-<input id="readerPassword" type="password" placeholder="Password Pasteling" required autocomplete="current-password">
-<div id="passwordStatus" class="status" aria-live="polite"></div>
-<button class="button primary full" type="submit"><i class="fa-solid fa-unlock-keyhole"></i> Buka Pasteling</button>
-</form></dialog>
 <div id="siteFooter"></div>
 <script type="module" src="/paste-view.js"></script><script src="/navbar.js" defer></script>
 </body></html>
