@@ -1,31 +1,52 @@
 <!doctype html>
 <html lang="id">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#f5f7fb">
-<meta name="description" content="Pastelink aman dan praktis — Vidpaste.">
-<title>Pastelink — Vidpaste</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/paste-view.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"><link rel="stylesheet" href="/navbar.css">
-<link rel="icon" href="/images/favicon.ico" sizes="any">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6fc">
+  <meta name="description" content="Baca Pastelink dengan nyaman dan aman di Vidpas.">
+  <title>Pastelink — Vidpas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/paste-view.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <link rel="stylesheet" href="/navbar.css">
+  <link rel="icon" href="/images/favicon.ico" sizes="any">
 </head>
 <body>
-<div id="siteNavbar"></div>
-<main class="pv-shell">
-  <div class="pv-breadcrumb"><a href="/"><i class="fa-solid fa-house"></i> Beranda</a><i class="fa-solid fa-chevron-right"></i><span>Pastelink</span></div>
-  <section id="reader" class="pv-reader" aria-live="polite">
-    <div class="pv-loading" id="initialLoading">
-      <div class="pv-loader-ring"><i class="fa-solid fa-link"></i></div>
-      <span class="pv-kicker">SECURE CONTENT DELIVERY</span>
-      <h1 id="loadingTitle">Memproses....</h1>
-      <p id="loadingDescription">Menyiapkan halaman Pastelink untuk Anda.</p>
-      <div class="pv-progress"><span id="loadingBar"></span></div>
-      <div class="pv-loading-foot"><span><i class="fa-solid fa-shield-halved"></i> Koneksi aman</span><b id="loadingPercent">0%</b></div>
-    </div>
-  </section>
-</main>
-<div id="siteFooter"></div>
-<script type="module" src="/paste-view.js"></script><script src="/navbar.js" defer></script>
-</body></html>
+  <div id="siteNavbar"></div>
+
+  <main class="pv-shell">
+    <nav class="pv-breadcrumb" aria-label="Breadcrumb">
+      <a href="/"><i class="fa-solid fa-house" aria-hidden="true"></i> Beranda</a>
+      <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      <span aria-current="page">Pastelink</span>
+    </nav>
+
+    <section id="reader" class="pv-reader" aria-live="polite" aria-busy="true">
+      <div class="pv-loading" id="initialLoading" role="status">
+        <div class="pv-loader-wrap" aria-hidden="true">
+          <span class="pv-loader-ring"></span>
+          <i class="pv-loader-icon fa-solid fa-link"></i>
+        </div>
+        <span class="pv-kicker">SECURE CONTENT DELIVERY</span>
+        <h1 id="loadingTitle">Memproses...</h1>
+        <p id="loadingDescription">Menyiapkan halaman Pastelink untuk Anda.</p>
+        <div class="pv-progress" role="progressbar" aria-label="Proses memuat Pastelink" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="loadingProgress">
+          <span id="loadingBar"></span>
+        </div>
+        <div class="pv-loading-foot">
+          <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Koneksi aman</span>
+          <b id="loadingPercent">0%</b>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="siteFooter"></div>
+  <script type="module" src="/paste-view.js"></script>
+  <script src="/navbar.js" defer></script>
+</body>
+</html>
