@@ -149,7 +149,9 @@ async function route(req,env,url){
   if(p==="/admin/videos"&&m==="POST"){
    const b=await body(req);if(!b.title||!b.embed_url)return err("Judul dan URL embed wajib diisi.");
    let u;try{u=new URL(b.embed_url)}catch{return err("URL embed tidak valid.")};if(!["https:","http:"].includes(u.protocol))return err("URL embed harus HTTP/HTTPS.");
-   const slug=random(8);const rows=await db(env,"videos",{method:"POST",body:JSON.stringify({slug,title:String(b.title).slice(0,160),description:String(b.description||"").slice(0,5000),embed_url:u.href,thumbnail_url:String(b.thumbnail_url||"").slice(0,1000),orientation:b.orientation==="vertical"?"vertical":"horizontal",download_url:String(b.download_url||"").slice(0,1000),unlock_tasks:Array.isArray(b.unlock_tasks)?b.unlock_tasks.slice(0,5):[],published:b.published!==false})});await log(env,"video_created",{slug});return json({item:rows[0],url:`${env.SITE_ORIGIN||url.origin}/v/${slug}`},201);
+   const tasks=Array.isArray(b.unlock_tasks)?b.unlock_tasks.slice(0,6):[];
+   for(const task of tasks){if(!["youtube","telegram","facebook","tiktok","whatsapp","x"].includes(String(task.type||"").toLowerCase()))return err("Platform Sub to Unlock tidak dikenal.");try{const target=new URL(String(task.url||""));if(!["https:","http:"].includes(target.protocol))throw Error();task.url=target.href}catch{return err("Salah satu link Sub to Unlock tidak valid.")}}
+   const slug=random(8);const rows=await db(env,"videos",{method:"POST",body:JSON.stringify({slug,title:String(b.title).slice(0,160),description:String(b.description||"").slice(0,5000),embed_url:u.href,thumbnail_url:String(b.thumbnail_url||"").slice(0,1000),orientation:b.orientation==="vertical"?"vertical":"horizontal",download_url:String(b.download_url||"").slice(0,1000),unlock_tasks:tasks,published:b.published!==false})});await log(env,"video_created",{slug});return json({item:rows[0],url:`${env.SITE_ORIGIN||url.origin}/v/${slug}`},201);
   }
   const vm=p.match(/^\/admin\/videos\/([0-9a-f-]+)$/);
   if(vm&&m==="PATCH"){
@@ -160,8 +162,8 @@ async function route(req,env,url){
    for(const k of ["thumbnail_url","download_url"])if(patch[k]){try{const u=new URL(String(patch[k]));if(!["https:","http:"].includes(u.protocol))throw Error();patch[k]=u.href}catch{return err(`URL ${k==="thumbnail_url"?"thumbnail":"download"} tidak valid.`)}}
    if(patch.orientation!==undefined)patch.orientation=patch.orientation==="vertical"?"vertical":"horizontal";
    if(patch.unlock_tasks!==undefined){
-    if(!Array.isArray(patch.unlock_tasks)||patch.unlock_tasks.length>5)return err("Maksimal 5 tugas Sub to Unlock.");
-    for(const task of patch.unlock_tasks){try{const u=new URL(String(task.url||""));if(!["https:","http:"].includes(u.protocol))throw Error();task.url=u.href}catch{return err("Salah satu link Sub to Unlock tidak valid.")}}
+    if(!Array.isArray(patch.unlock_tasks)||patch.unlock_tasks.length>6)return err("Maksimal 6 tugas Sub to Unlock.");
+    for(const task of patch.unlock_tasks){if(!["youtube","telegram","facebook","tiktok","whatsapp","x"].includes(String(task.type||"").toLowerCase()))return err("Platform Sub to Unlock tidak dikenal.");try{const u=new URL(String(task.url||""));if(!["https:","http:"].includes(u.protocol))throw Error();task.url=u.href}catch{return err("Salah satu link Sub to Unlock tidak valid.")}}
    }
    await db(env,`videos?id=eq.${vm[1]}`,{method:"PATCH",body:JSON.stringify(patch)});return json({ok:true})
   }
