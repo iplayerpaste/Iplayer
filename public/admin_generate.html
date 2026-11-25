@@ -13,8 +13,14 @@ button{border:0;border-radius:10px;padding:13px 16px;font-weight:700;cursor:poin
 output{display:block;overflow-wrap:anywhere;background:#f1f5f9;border-radius:10px;padding:14px;margin-top:12px;min-height:48px;font:13px ui-monospace,monospace}
 small{color:#64748b}.ok{color:#087443}
 </style>
-</head>
-<body><main>
+
+<link rel="icon" href="/images/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/images/favicon.png" sizes="512x512">
+<link rel="apple-touch-icon" href="/images/favicon.png">
+<link rel="stylesheet" href="/navbar.css"></head>
+<body>
+<div id="siteNavbar"></div>
+<main>
 <h1>Vidpas — Generator Hash Admin</h1>
 <p><strong style="color:#087443">Build aktif: PBKDF2-100K-R2</strong></p>
 <p>Alat ini berjalan sepenuhnya di browser perangkatmu. Password tidak dikirim ke server atau internet.</p>
@@ -48,4 +54,7 @@ $('make').onclick=async()=>{
  }catch(e){$('status').textContent='Browser tidak mendukung Web Crypto di konteks ini. Coba buka file ini di Chrome.'}
 };
 $('copy').onclick=async()=>{const v=$('result').textContent;if(!v)return;try{await navigator.clipboard.writeText(v);$('status').textContent='Hash berhasil disalin.'}catch{$('status').textContent='Salin hasil secara manual.'}};
-</script></body></html>
+</script>
+<div id="siteFooter"></div>
+<script src="/navbar.js" defer></script>
+</body></html>
