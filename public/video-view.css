@@ -333,3 +333,15 @@
 .unlock-first-thumbnail img,.unlock-first-thumbnail video,.unlock-first-thumbnail iframe{width:100%;height:100%;object-fit:cover}
 .video-stage-thumb.is-vertical{aspect-ratio:9/16;max-width:420px;margin-inline:auto}
 .video-stage-thumb.is-horizontal{aspect-ratio:16/9}
+
+
+/* Admin-selected orientation is the single source of truth for Sub to Unlock
+   and related-video thumbnails. Avoid max-height rules that break 9:16. */
+.unlock-first-thumbnail{position:relative;width:100%;max-width:none;max-height:none;aspect-ratio:16/9;overflow:hidden}
+.unlock-first-thumbnail.is-horizontal{width:100%;max-width:none;max-height:none;aspect-ratio:16/9;margin-inline:0}
+.unlock-first-thumbnail.is-vertical{width:min(100%,320px);max-width:320px;max-height:none;aspect-ratio:9/16;margin-inline:auto}
+.unlock-first-thumbnail>.vp-thumb-media{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;object-fit:cover}
+.related-card .related-thumb{position:relative;width:100%;aspect-ratio:16/9;max-height:none;overflow:hidden}
+.related-card.is-horizontal .related-thumb{width:100%;max-width:none;aspect-ratio:16/9;margin-inline:0}
+.related-card.is-vertical .related-thumb{width:min(100%,220px);max-width:220px;aspect-ratio:9/16;max-height:none;margin-inline:auto}
+.related-card .related-thumb>.vp-thumb-media{position:absolute;inset:0;width:100%;height:100%;aspect-ratio:auto;object-fit:cover}
