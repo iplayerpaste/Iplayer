@@ -5,13 +5,14 @@ async function call(path,opt={}){const r=await fetch(`/api${path}`,{credentials:
 const taskLabels={youtube:'Subscribe YouTube',facebook:'Ikuti / gabung Facebook',whatsapp:'Join saluran WhatsApp',telegram:'Join grup Telegram'};
 let videos=[],editingId=null;
 function status(id,msg,ok=false){$(id).textContent=msg;$(id).className=`status ${ok?'success':'error'}`}
-function renderTasks(selected=[]){
+function renderTasks(selected){
+ if(!Array.isArray(selected)) selected=readTasks();
  const byType=Object.fromEntries(selected.map(t=>[String(t.type||'').toLowerCase(),t]));
  document.querySelectorAll('.unlock-kind').forEach(x=>x.checked=!!byType[x.value]);
  const kinds=[...document.querySelectorAll('.unlock-kind:checked')].map(x=>x.value);
  $('unlockUrls').innerHTML=kinds.map(k=>{const t=byType[k]||{};return `<div class="task-field"><label>Teks tugas<input data-task-label="${k}" value="${esc(t.label||taskLabels[k])}" maxlength="90" required></label><label>Link tujuan<input data-task-url="${k}" type="url" value="${esc(t.url||'')}" placeholder="https://..." required></label></div>`}).join('');
 }
-document.querySelectorAll('.unlock-kind').forEach(x=>x.addEventListener('change',()=>renderTasks()));
+document.querySelectorAll('.unlock-kind').forEach(x=>x.addEventListener('change',()=>renderTasks(readTasks())));
 function readTasks(){return [...document.querySelectorAll('.unlock-kind:checked')].map(x=>({type:x.value,label:document.querySelector(`[data-task-label="${x.value}"]`)?.value.trim()||taskLabels[x.value],url:document.querySelector(`[data-task-url="${x.value}"]`)?.value.trim()||''}));}
 function resetEditor(){
  editingId=null;$('videoForm').reset();renderTasks();updateThumbnailPreview();$('videoSubmit').innerHTML='<i class="fa-solid fa-cloud-arrow-up"></i> Publish Video';$('videoCancelEdit').classList.add('hidden');$('videoForm').scrollIntoView({behavior:'smooth',block:'start'});
@@ -29,7 +30,7 @@ function startEdit(v){
 }
 function renderList(){
  $('videoList').innerHTML=videos.map(v=>`<article class="paste-card admin-video-card">
- <div class="vp-admin-thumb">${thumbnailMarkup(v.thumbnail_url,v.title,'vp-thumb-media')}</div>
+ <div class="vp-admin-thumb ${v.orientation==='vertical'?"is-vertical":"is-horizontal"}">${thumbnailMarkup(v.thumbnail_url,v.title,'vp-thumb-media')}</div>
  <div><h3>${esc(v.title)}</h3><p>${esc(v.orientation||'horizontal')} · ${Number(v.views||0)} dilihat · ${Number(v.downloads||0)} download · ${Number(v.shares||0)} share · ${v.published?'Tayang':'Draft'}</p>
  <a href="/v/${encodeURIComponent(v.slug)}" target="_blank" rel="noopener">Buka halaman video <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
  <div class="video-admin-actions"><button class="button primary" type="button" data-edit="${esc(v.id)}"><i class="fa-solid fa-pen-to-square"></i> Edit link & pengaturan</button>
@@ -57,8 +58,8 @@ function updateThumbnailPreview(){
  const box=$('thumbnailPreview');
  if(!box)return;
  const value=$('videoThumbnail').value.trim();
- box.innerHTML=value?thumbnailMarkup(value,$('videoTitle').value.trim()||'Preview thumbnail','vp-thumb-media'):'<div class="vp-thumb-placeholder"><i class="fa-solid fa-image"></i><span>Preview thumbnail akan muncul di sini</span></div>';
+ box.classList.toggle('is-vertical',$('videoOrientation')?.value==='vertical'); box.innerHTML=value?thumbnailMarkup(value,$('videoTitle').value.trim()||'Preview thumbnail','vp-thumb-media'):'<div class="vp-thumb-placeholder"><i class="fa-solid fa-image"></i><span>Preview thumbnail akan muncul di sini</span></div>';
 }
 $('videoThumbnail').addEventListener('input',updateThumbnailPreview);
-$('videoTitle').addEventListener('input',updateThumbnailPreview);
+$('videoTitle').addEventListener('input',updateThumbnailPreview);$('videoOrientation').addEventListener('change',updateThumbnailPreview);
 renderTasks();updateThumbnailPreview();boot();

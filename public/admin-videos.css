@@ -11,3 +11,22 @@
 @media(max-width:600px){.video-admin-actions,.video-form-actions{display:grid;grid-template-columns:1fr}.video-admin-actions .button,.video-form-actions .button{width:100%}}
 
 .vp-admin-thumb{position:relative;overflow:hidden;width:100%;aspect-ratio:16/9;border-radius:12px;background:#eef1f7}.vp-admin-thumb>.vp-thumb-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.vp-thumbnail-preview{margin:4px 0 8px}
+
+/* Admin controls: accessible, reliable checkbox hit areas and orientation-aware preview */
+.admin-unlock-field .form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.admin-unlock-field .form-grid label{display:flex!important;align-items:center;justify-content:flex-start;gap:10px;min-height:48px;cursor:pointer;user-select:none}
+.admin-unlock-field .form-grid input[type=checkbox]{width:18px;height:18px;min-width:18px;margin:0;accent-color:#5368dc;cursor:pointer}
+.admin-unlock-field .form-grid label i{width:20px;text-align:center}
+.admin-unlock-field .form-grid label:has(input:checked){border-color:#8794ef;background:#f0f2ff;color:#3949a5;box-shadow:0 0 0 2px #6878e51a}
+.vp-thumbnail-preview.is-vertical{max-width:260px;margin-inline:auto;aspect-ratio:9/16}
+.vp-thumbnail-preview:not(.is-vertical){aspect-ratio:16/9}
+.vp-thumbnail-preview{overflow:hidden;border-radius:14px;background:#f1f3f9}
+.vp-thumbnail-preview img,.vp-thumbnail-preview video,.vp-thumbnail-preview iframe{width:100%;height:100%;object-fit:cover;border:0}
+@media(max-width:680px){.admin-unlock-field .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.vp-thumbnail-preview{display:block;position:relative;width:100%;max-width:100%;aspect-ratio:16/9}
+.vp-thumbnail-preview.is-vertical{width:min(100%,260px);aspect-ratio:9/16}
+.vp-admin-thumb.is-vertical{aspect-ratio:9/16;max-width:180px;margin-inline:auto}
+.vp-admin-thumb.is-horizontal{aspect-ratio:16/9}
+.vp-admin-thumb{position:relative;overflow:hidden;border-radius:12px;background:#eef1f7}
+.vp-admin-thumb iframe,.vp-admin-thumb video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:0}

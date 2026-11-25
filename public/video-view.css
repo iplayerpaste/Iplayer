@@ -320,3 +320,16 @@
 @media(max-width:560px){.video-native-ad{bottom:8px}.video-native-ad iframe{height:160px}.video-floating-ad{bottom:68px}.video-slide-ad{bottom:8px}}
 
 .related-thumb>.vp-thumb-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.related-thumb>.vp-thumb-embed{pointer-events:none}
+
+/* Related thumbnails follow each video's admin-selected orientation. */
+.related-card.is-vertical .related-thumb{aspect-ratio:9/16;max-height:340px}
+.related-card.is-horizontal .related-thumb{aspect-ratio:16/9}
+.related-card .related-thumb{overflow:hidden}
+.related-card .related-thumb img,.related-card .related-thumb video,.related-card .related-thumb iframe{width:100%;height:100%;object-fit:cover}
+@media(max-width:600px){.related-card.is-vertical .related-thumb{max-height:250px}}
+
+.unlock-first-thumbnail.is-vertical{max-width:420px;aspect-ratio:9/16;margin-inline:auto;overflow:hidden}
+.unlock-first-thumbnail.is-horizontal{aspect-ratio:16/9;overflow:hidden}
+.unlock-first-thumbnail img,.unlock-first-thumbnail video,.unlock-first-thumbnail iframe{width:100%;height:100%;object-fit:cover}
+.video-stage-thumb.is-vertical{aspect-ratio:9/16;max-width:420px;margin-inline:auto}
+.video-stage-thumb.is-horizontal{aspect-ratio:16/9}

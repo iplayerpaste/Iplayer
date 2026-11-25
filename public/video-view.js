@@ -118,7 +118,7 @@ function renderPlayer(data) {
   const src = normalizeVideoSource(data.embed_url);
   if (!src) throw Error("URL video tidak valid atau format penyedia belum didukung.");
   const stage = $("videoStage");
-  if (stage) stage.innerHTML = `<div class="player-topline"><span><i class="fa-solid fa-circle-play"></i> VIDPAS VIDEO PLAYER</span><span><i class="fa-solid fa-shield-halved"></i> Akses terbuka</span></div><div class="video-player ${data.orientation === "vertical" ? "vertical" : ""}">${playerMarkup(src, data.title)}</div>`;
+  if (stage) stage.innerHTML = `<div class="player-topline"><span><i class="fa-solid fa-circle-play"></i> VIDPAS VIDEO PLAYER</span><span><i class="fa-solid fa-shield-halved"></i> Akses terbuka</span></div><div class="video-player ${data.orientation === "vertical" ? "vertical" : "horizontal"}" data-orientation="${data.orientation === "vertical" ? "vertical" : "horizontal"}">${playerMarkup(src, data.title)}</div>`;
   const gate = $("lockedPlayerArea");
   if (gate) { gate.hidden = true; gate.innerHTML = ""; }
   unlocked = true;
@@ -139,13 +139,13 @@ function renderPlayer(data) {
 function renderLockedStage(data) {
   const stage = $("videoStage");
   if (!stage) return;
-  stage.innerHTML = `<div class="player-topline"><span><i class="fa-solid fa-circle-play"></i> VIDPAS VIDEO PLAYER</span><span><i class="fa-solid fa-lock"></i> Akses terkunci</span></div><div class="video-stage-locked"><div class="video-stage-thumb">${thumbnailMarkup(data.thumbnail_url,data.title,'vp-thumb-media')}</div><div class="video-stage-shade"></div><div class="video-stage-message"><i class="fa-solid fa-lock"></i><strong>Video siap ditonton</strong><span>Selesaikan tugas akses di bawah untuk membuka video.</span></div></div>`;
+  stage.innerHTML = `<div class="player-topline"><span><i class="fa-solid fa-circle-play"></i> VIDPAS VIDEO PLAYER</span><span><i class="fa-solid fa-lock"></i> Akses terkunci</span></div><div class="video-stage-locked"><div class="video-stage-thumb ${data.orientation==="vertical"?"is-vertical":"is-horizontal"}">${thumbnailMarkup(data.thumbnail_url,data.title,'vp-thumb-media')}</div><div class="video-stage-shade"></div><div class="video-stage-message"><i class="fa-solid fa-lock"></i><strong>Video siap ditonton</strong><span>Selesaikan tugas akses di bawah untuk membuka video.</span></div></div>`;
 }
 
 function lockedMarkup() {
   return `<section class="unlock-first-view">
     <div class="unlock-first-title"><span>VIDEO TERKUNCI</span><h1>${esc(videoData.title)}</h1></div>
-    <div class="unlock-first-thumbnail">${thumbnailMarkup(videoData.thumbnail_url,videoData.title,"vp-thumb-media")}</div>
+    <div class="unlock-first-thumbnail ${videoData.orientation==="vertical"?"is-vertical":"is-horizontal"}">${thumbnailMarkup(videoData.thumbnail_url,videoData.title,"vp-thumb-media")}</div>
     <div class="unlock-first-status"><i class="fa-solid fa-lock"></i><strong>Video terkunci akses</strong><p>Silahkan selesaikan tugas terlebih dahulu</p></div>
     <div class="unlock-task-list unlock-task-list-simple" id="unlockTaskList">
       ${tasks.map((t,i) => {
@@ -343,7 +343,7 @@ function renderRelated() {
     const items = shuffle(all.filter(v => v.slug !== slug)).slice(0,8);
     if (!items.length) { grid.classList.add("hidden"); empty.classList.remove("hidden"); return; }
     grid.classList.remove("hidden"); empty.classList.add("hidden");
-    const card = v => `<a class="related-card" href="/v/${encodeURIComponent(v.slug)}">
+    const card = v => `<a class="related-card ${v.orientation==="vertical"?"is-vertical":"is-horizontal"}" href="/v/${encodeURIComponent(v.slug)}">
       <div class="related-thumb">${v.thumbnail_url?thumbnailMarkup(v.thumbnail_url,v.title,"vp-thumb-media"):'<span class="related-no-thumb"><i class="fa-solid fa-circle-play"></i></span>'}<span class="related-play"><i class="fa-solid fa-play"></i></span></div>
       <div class="related-copy"><h3>${esc(v.title)}</h3><p><i class="fa-regular fa-eye"></i> ${Number(v.views||0).toLocaleString("id-ID")} views</p></div></a>`;
     const first = items.slice(0,2).map(card).join("");
