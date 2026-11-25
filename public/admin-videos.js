@@ -2,7 +2,7 @@ import { thumbnailMarkup } from "/video-embed.js";
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function call(path,opt={}){const r=await fetch(`/api${path}`,{credentials:'include',headers:{'Content-Type':'application/json'},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Permintaan gagal');return d}
-const taskLabels={youtube:'Subscribe YouTube',facebook:'Ikuti / gabung Facebook',whatsapp:'Join saluran WhatsApp',telegram:'Join grup Telegram'};
+const taskLabels={youtube:'Like & Comment YouTube',telegram:'Join Telegram',facebook:'Follow / Like Facebook',tiktok:'Follow TikTok',whatsapp:'Join WhatsApp',x:'Follow X'};
 let videos=[],editingId=null;
 function status(id,msg,ok=false){$(id).textContent=msg;$(id).className=`status ${ok?'success':'error'}`}
 function renderTasks(selected){

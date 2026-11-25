@@ -6,9 +6,11 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const platforms = {
   youtube:{name:"YouTube",icon:"fa-brands fa-youtube",tone:"youtube"},
-  facebook:{name:"Facebook",icon:"fa-brands fa-facebook",tone:"facebook"},
   telegram:{name:"Telegram",icon:"fa-brands fa-telegram",tone:"telegram"},
-  whatsapp:{name:"WhatsApp",icon:"fa-brands fa-whatsapp",tone:"whatsapp"}
+  facebook:{name:"Facebook",icon:"fa-brands fa-facebook",tone:"facebook"},
+  tiktok:{name:"TikTok",icon:"fa-brands fa-tiktok",tone:"tiktok"},
+  whatsapp:{name:"WhatsApp",icon:"fa-brands fa-whatsapp",tone:"whatsapp"},
+  x:{name:"X",icon:"fa-brands fa-x-twitter",tone:"x"}
 };
 const DEFAULT_TELEGRAM = "https://t.me/vidpas";
 const DEFAULT_WHATSAPP = "https://whatsapp.com/channel/0029VbEU8HWIt5rxVZ1eFg3c";
@@ -52,7 +54,8 @@ const ANDROID_APP_PACKAGES = {
   telegram:"org.telegram.messenger",
   whatsapp:"com.whatsapp",
   facebook:"com.facebook.katana",
-  youtube:"com.google.android.youtube"
+  youtube:"com.google.android.youtube",
+  tiktok:"com.zhiliaoapp.musically"
 };
 function platformAppHref(type, value) {
   const kind = String(type || "").toLowerCase();
@@ -151,7 +154,8 @@ function lockedMarkup() {
       ${tasks.map((t,i) => {
         const p = platforms[String(t.type || "").toLowerCase()] || {name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square",tone:"generic"};
         const complete = !!saved[i];
-        const label = t.label || (String(t.type).toLowerCase()==="telegram" ? "Join Telegram" : String(t.type).toLowerCase()==="whatsapp" ? "Gabung Saluran WhatsApp" : `Gabung ${p.name}`);
+        const defaults = {youtube:"Like & Comment YouTube",telegram:"Join Telegram",facebook:"Follow / Like Facebook",tiktok:"Follow TikTok",whatsapp:"Join WhatsApp",x:"Follow X"};
+        const label = t.label || defaults[String(t.type||"").toLowerCase()] || `Lanjutkan ${p.name}`;
         return `<article class="unlock-task-simple ${complete?"is-complete":""}" id="unlockTask${i}">
           <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(platformAppHref(t.type,t.url))}" target="_self" rel="noopener noreferrer"><i class="${p.icon}" aria-hidden="true"></i><span>${esc(complete?"Selesai":label)}</span>${complete?'<i class="fa-solid fa-check"></i>':'<i class="fa-solid fa-arrow-up-right-from-square"></i>'}</a>
           <small>${esc(taskAccountText(t.type,t.url))}</small>
