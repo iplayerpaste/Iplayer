@@ -1,0 +1,13 @@
+/* Shared Vidpas navbar */
+.site-navbar{position:sticky;top:0;z-index:1000;width:100%;background:rgba(255,255,255,.94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid #e8edf5;box-shadow:0 5px 22px rgba(20,32,55,.055)}
+.site-navbar-inner{max-width:1180px;min-height:76px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;justify-content:space-between;gap:22px}
+.site-navbar-brand{display:flex;align-items:center;min-width:0;text-decoration:none}
+.site-navbar-logo{display:block;width:clamp(138px,19vw,208px);height:48px;object-fit:contain;object-position:left center}
+.site-navbar-actions{display:flex;align-items:center;gap:10px}
+.site-navbar-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 19px;border-radius:13px;text-decoration:none!important;font:700 14px/1 'DM Sans',sans-serif;white-space:nowrap;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+.site-navbar-link:hover{transform:translateY(-1px)}
+.site-navbar-link.pastelink{color:#5141a5;background:#f0edff;border:1px solid #e2dcff}
+.site-navbar-link.videos{color:#fff;background:linear-gradient(135deg,#5268e8,#7658d9);box-shadow:0 7px 18px rgba(91,91,220,.2)}
+.site-navbar-link i{font-size:14px}
+@media(max-width:560px){.site-navbar-inner{min-height:66px;padding:8px 12px;gap:8px}.site-navbar-logo{width:clamp(100px,31vw,140px);height:38px}.site-navbar-actions{gap:6px}.site-navbar-link{min-height:38px;padding:0 10px;border-radius:10px;font-size:11px;gap:5px}.site-navbar-link i{font-size:11px}}
+@media(max-width:360px){.site-navbar-inner{padding-left:9px;padding-right:9px}.site-navbar-logo{width:92px}.site-navbar-link{padding:0 8px;font-size:10px}}
