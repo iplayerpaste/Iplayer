@@ -55,16 +55,40 @@ const ANDROID_APP_PACKAGES = {
   youtube:"com.google.android.youtube"
 };
 function platformAppHref(type, value) {
+  const kind = String(type || "").toLowerCase();
   const url = safeHttpUrl(value);
   if (!url) return "#";
-  if (!/Android/i.test(navigator.userAgent || "")) return url;
-  const packageName = ANDROID_APP_PACKAGES[String(type || "").toLowerCase()];
-  if (!packageName) return url;
   try {
     const u = new URL(url);
-    const fallback = encodeURIComponent(url);
-    return `intent://${u.host}${u.pathname}${u.search}${u.hash}#Intent;scheme=${u.protocol.slice(0,-1)};package=${packageName};S.browser_fallback_url=${fallback};end`;
+    // Use normal verified HTTPS App Links. Hard-coded intent:// links were
+    // preventing some Android/Chrome versions from opening the destination app.
+    if (kind === "youtube" && /(^|\.)youtube\.com$|youtu\.be$/i.test(u.hostname)) {
+      u.searchParams.set("sub_confirmation", "1");
+    }
+    return u.href;
   } catch { return url; }
+}
+function taskAccountText(type, value) {
+  const kind = String(type || "").toLowerCase();
+  try {
+    const u = new URL(safeHttpUrl(value));
+    const parts = u.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+    if (kind === "youtube") {
+      const handle = parts.find(x => x.startsWith("@"));
+      if (handle) return `Akun YouTube: ${handle}`;
+      if (parts[0] === "channel" && parts[1]) return `Channel YouTube: ${parts[1]}`;
+      if (parts[0] === "c" && parts[1]) return `Channel YouTube: ${parts[1]}`;
+    }
+    if (kind === "telegram" && parts[0] && !["joinchat", "addstickers", "proxy"].includes(parts[0].toLowerCase()))
+      return `Telegram: @${parts[0].replace(/^@/, "")}`;
+    if (kind === "facebook" && parts[0] && !["share", "watch", "groups", "events"].includes(parts[0].toLowerCase()))
+      return `Facebook: ${parts[0]}`;
+    if (kind === "whatsapp" && /whatsapp\.com$/i.test(u.hostname)) {
+      if (parts[0] === "channel") return "Saluran WhatsApp";
+      if (parts[0] === "group") return "Grup WhatsApp";
+    }
+    return `Tujuan ${platforms[kind]?.name || "tugas"}`;
+  } catch { return `Tujuan ${platforms[kind]?.name || "tugas"}`; }
 }
 function renderPlayer(data) {
   const src = normalizeVideoSource(data.embed_url);
@@ -107,8 +131,8 @@ function lockedMarkup() {
         const complete = !!saved[i];
         const label = t.label || (String(t.type).toLowerCase()==="telegram" ? "Join Telegram" : String(t.type).toLowerCase()==="whatsapp" ? "Gabung Saluran WhatsApp" : `Gabung ${p.name}`);
         return `<article class="unlock-task-simple ${complete?"is-complete":""}" id="unlockTask${i}">
-          <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(platformAppHref(t.type,t.url))}" rel="noopener noreferrer"><i class="${p.icon}"></i><span>${esc(complete?"Selesai":label)}</span>${complete?'<i class="fa-solid fa-check"></i>':'<i class="fa-solid fa-arrow-up-right-from-square"></i>'}</a>
-          <small>${complete?"Tautan dibuka":"Tekan tombol untuk bergabung"}</small>
+          <a class="unlock-open-btn ${complete?"is-complete":""}" data-open-task="${i}" href="${esc(platformAppHref(t.type,t.url))}" target="_blank" rel="noopener noreferrer"><i class="${p.icon}" aria-hidden="true"></i><span>${esc(complete?"Selesai":label)}</span>${complete?'<i class="fa-solid fa-check"></i>':'<i class="fa-solid fa-arrow-up-right-from-square"></i>'}</a>
+          <small>${esc(taskAccountText(t.type,t.url))}</small>
         </article>`;
       }).join("")}
     </div>
@@ -133,8 +157,12 @@ function refreshTaskProgress() {
     card.classList.toggle("is-complete", !!saved[i]);
     const a = card.querySelector("a");
     const small = card.querySelector("small");
-    if (a && saved[i]) { a.classList.add("is-complete"); a.innerHTML = '<i class="fa-solid fa-check"></i> Selesai'; }
-    if (small) small.textContent = saved[i] ? "Tautan dibuka" : "Buka tautan tujuan";
+    const p = platforms[String(tasks[i]?.type || "").toLowerCase()] || {name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square"};
+    if (a && saved[i]) {
+      a.classList.add("is-complete");
+      a.innerHTML = `<i class="${p.icon}" aria-hidden="true"></i><span>Selesai</span><i class="fa-solid fa-check" aria-hidden="true"></i>`;
+    }
+    if (small) small.textContent = taskAccountText(tasks[i]?.type,tasks[i]?.url);
   });
   const btn = $("continueWatchBtn");
   if (btn) {
@@ -389,6 +417,15 @@ function startSlideAd() {
     window.setTimeout(() => { panel.hidden = true; panel.classList.remove("is-hiding"); }, 360);
   };
 }
+let unlockedAdServicesStarted = false;
+function startUnlockedAdServices() {
+  if (unlockedAdServicesStarted) return;
+  unlockedAdServicesStarted = true;
+  loadSocialBar();
+  startSlideAd();
+  setupCommunityNotice();
+}
+
 async function setupCommunityNotice() {
   let settings = {};
   try { settings = await api("/settings"); } catch(e) { console.warn("Community links:",e); }
@@ -470,7 +507,7 @@ function buildUnlockedPage(data) {
       <button class="video-action-btn download" id="downloadBtn" type="button" disabled><i class="fa-solid fa-download"></i><span>Download tidak tersedia</span></button>
       <button class="video-action-btn" id="shareBtn" type="button"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
     </div><p class="actions-hint" id="downloadHint">${data.download_url ? "Video sudah terbuka. Kamu bisa menonton dan mengunduh." : "Publisher belum menyediakan tautan download."}</p></section>
-    <div class="video-social-shortcuts">${tasks.map(t=>{const p=platforms[String(t.type||"").toLowerCase()]||{name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square",tone:"generic"};return `<a class="video-social-button ${p.tone}" href="${esc(platformAppHref(t.type,t.url))}" rel="noopener noreferrer" aria-label="${esc(p.name)}"><i class="${p.icon}"></i><span>${esc(p.name)}</span></a>`;}).join("")}</div>
+    <div class="video-social-shortcuts">${tasks.map(t=>{const p=platforms[String(t.type||"").toLowerCase()]||{name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square",tone:"generic"};return `<a class="video-social-button ${p.tone}" href="${esc(platformAppHref(t.type,t.url))}" target="_blank" rel="noopener noreferrer" aria-label="${esc(p.name)}"><i class="${p.icon}"></i><span>${esc(p.name)}</span></a>`;}).join("")}</div>
     <div class="video-page-ad video-unlock-ad"><div class="ad-caption">Advertisement</div><div id="unlockBannerSlot" class="ad-slot ad-300x250"></div></div>
   </section>`;
   const related = $("relatedSection");
@@ -480,6 +517,7 @@ function buildUnlockedPage(data) {
   queueAd(() => loadAdsterraBanner("topBannerSlot","a0c724147631738be4791be58f8fbaed",728,90,"https://biomanos.org/22/a0c724147631738be4791be58f8fbaed"));
   queueAd(() => loadAdsterraBanner("midBannerSlot","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd"));
   queueAd(() => loadAdsterraBanner("unlockBannerSlot","100bd0c6cfd6cedb608b2e083620df0e",300,250,"https://biomanos.org/22/100bd0c6cfd6cedb608b2e083620df0e"));
+  startUnlockedAdServices();
   renderRelated();
 }
 function buildPage(data) {
@@ -499,10 +537,9 @@ window.addEventListener("pageshow", event => {
 
 (async () => {
   try {
-    loadSocialBar();
-    startSlideAd();
+    // Locked Sub to Unlock page: only the popunder provider is initialized.
+    // Banner rotations, social bar and other ad placements start after unlock.
     setupPopunder();
-    setupCommunityNotice();
     const d = await api(`/videos/${encodeURIComponent(slug)}`);
     if (!d || !d.title) throw Error("Video tidak ditemukan.");
     const remaining = Math.max(0, 3000 - (Date.now() - pageEnteredAt));
