@@ -1,4 +1,4 @@
-import { normalizeVideoSource, playerMarkup } from "/video-embed.js";
+import { normalizeVideoSource, playerMarkup, thumbnailMarkup } from "/video-embed.js";
 
 const slug = location.pathname.split("/").filter(Boolean).at(-1);
 const root = document.getElementById("videoDetail");
@@ -139,15 +139,13 @@ function renderPlayer(data) {
 function renderLockedStage(data) {
   const stage = $("videoStage");
   if (!stage) return;
-  const thumb = safeHttpUrl(data.thumbnail_url);
-  stage.innerHTML = `<div class="player-topline"><span><i class="fa-solid fa-circle-play"></i> VIDPAS VIDEO PLAYER</span><span><i class="fa-solid fa-lock"></i> Akses terkunci</span></div><div class="video-stage-locked" ${thumb ? `style="--stage-thumb:url('${esc(thumb)}')"` : ""}><div class="video-stage-shade"></div><div class="video-stage-message"><i class="fa-solid fa-lock"></i><strong>Video siap ditonton</strong><span>Selesaikan tugas akses di bawah untuk membuka video.</span></div></div>`;
+  stage.innerHTML = `<div class="player-topline"><span><i class="fa-solid fa-circle-play"></i> VIDPAS VIDEO PLAYER</span><span><i class="fa-solid fa-lock"></i> Akses terkunci</span></div><div class="video-stage-locked"><div class="video-stage-thumb">${thumbnailMarkup(data.thumbnail_url,data.title,'vp-thumb-media')}</div><div class="video-stage-shade"></div><div class="video-stage-message"><i class="fa-solid fa-lock"></i><strong>Video siap ditonton</strong><span>Selesaikan tugas akses di bawah untuk membuka video.</span></div></div>`;
 }
 
 function lockedMarkup() {
-  const thumb = safeHttpUrl(videoData.thumbnail_url);
   return `<section class="unlock-first-view">
     <div class="unlock-first-title"><span>VIDEO TERKUNCI</span><h1>${esc(videoData.title)}</h1></div>
-    ${thumb ? `<img class="unlock-first-thumbnail" src="${esc(thumb)}" alt="Thumbnail ${esc(videoData.title)}">` : `<div class="unlock-first-thumbnail unlock-first-thumbnail-empty"><i class="fa-solid fa-photo-film"></i></div>`}
+    <div class="unlock-first-thumbnail">${thumbnailMarkup(videoData.thumbnail_url,videoData.title,"vp-thumb-media")}</div>
     <div class="unlock-first-status"><i class="fa-solid fa-lock"></i><strong>Video terkunci akses</strong><p>Silahkan selesaikan tugas terlebih dahulu</p></div>
     <div class="unlock-task-list unlock-task-list-simple" id="unlockTaskList">
       ${tasks.map((t,i) => {
@@ -346,7 +344,7 @@ function renderRelated() {
     if (!items.length) { grid.classList.add("hidden"); empty.classList.remove("hidden"); return; }
     grid.classList.remove("hidden"); empty.classList.add("hidden");
     const card = v => `<a class="related-card" href="/v/${encodeURIComponent(v.slug)}">
-      <div class="related-thumb">${v.thumbnail_url?`<img src="${esc(v.thumbnail_url)}" alt="${esc(v.title)}" loading="lazy">`:'<span class="related-no-thumb"><i class="fa-solid fa-circle-play"></i></span>'}<span class="related-play"><i class="fa-solid fa-play"></i></span></div>
+      <div class="related-thumb">${v.thumbnail_url?thumbnailMarkup(v.thumbnail_url,v.title,"vp-thumb-media"):'<span class="related-no-thumb"><i class="fa-solid fa-circle-play"></i></span>'}<span class="related-play"><i class="fa-solid fa-play"></i></span></div>
       <div class="related-copy"><h3>${esc(v.title)}</h3><p><i class="fa-regular fa-eye"></i> ${Number(v.views||0).toLocaleString("id-ID")} views</p></div></a>`;
     const first = items.slice(0,2).map(card).join("");
     const middle = items.slice(2,6).map(card).join("");

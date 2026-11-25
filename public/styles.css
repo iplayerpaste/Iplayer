@@ -153,3 +153,23 @@ footer{display:flex;justify-content:space-between;color:#9aa4b5;font-size:10px;p
 /* Sub-to-unlock return flow */
 .unlock-task-action{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}.unlock-task-action .button{white-space:nowrap}.task-state{font-size:12px;color:#687386;min-width:92px;text-align:right}.unlock-task [data-open-task]:disabled{opacity:.75;cursor:default}.unlock-box .fineprint{display:block;margin-top:12px;line-height:1.55}.unlock-box #unlockProcessing{font-weight:600;color:#315fc4;min-height:20px;margin:10px 0}
 @media(max-width:520px){.unlock-task{align-items:flex-start;flex-direction:column}.unlock-task-action{width:100%;justify-content:space-between}.task-state{text-align:right}.unlock-task-action .button{flex:1}}
+
+
+/* Shared thumbnail renderer: image, video file, or third-party embed */
+.vp-thumb-media{display:block;width:100%;height:100%;min-height:0;aspect-ratio:16/9;object-fit:cover;border:0;background:#111827}
+.vp-thumb-embed{pointer-events:none}
+.vp-thumb-placeholder,.vp-thumb-failed{display:grid;place-items:center;gap:8px;min-height:120px;width:100%;height:100%;background:linear-gradient(135deg,#eef1ff,#eaf6f7);color:#7b82b7;font-size:13px}
+.vp-thumb-placeholder span{font-size:25px}
+.video-thumb>.vp-thumb-media,.related-thumb>.vp-thumb-media{position:absolute;inset:0}
+.video-thumb,.related-thumb,.vp-admin-thumb{position:relative;overflow:hidden}
+.video-card>.vp-thumb-media{width:100%;aspect-ratio:16/9;object-fit:cover}
+.vp-admin-thumb{width:100%;aspect-ratio:16/9;border-radius:13px;background:#f0f2f8}
+.vp-admin-thumb>.vp-thumb-media{position:absolute;inset:0}
+.vp-thumbnail-preview{width:min(100%,520px);aspect-ratio:16/9;overflow:hidden;border:1px solid #e2e7f0;border-radius:16px;background:#f2f4f9}
+.vp-thumbnail-preview>.vp-thumb-media{width:100%;height:100%;object-fit:contain}
+.unlock-first-thumbnail{position:relative;overflow:hidden;padding:0}
+.unlock-first-thumbnail>.vp-thumb-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.video-stage-thumb{position:absolute;inset:0}
+.video-stage-thumb>.vp-thumb-media{width:100%;height:100%;object-fit:cover}
+.video-protected>.vp-thumb-media{width:100%;aspect-ratio:16/9;object-fit:cover}
+@media(max-width:600px){.vp-thumbnail-preview{width:100%}.vp-admin-thumb{aspect-ratio:16/9}}

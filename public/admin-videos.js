@@ -1,3 +1,4 @@
+import { thumbnailMarkup } from "/video-embed.js";
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function call(path,opt={}){const r=await fetch(`/api${path}`,{credentials:'include',headers:{'Content-Type':'application/json'},...opt});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||'Permintaan gagal');return d}
@@ -13,12 +14,12 @@ function renderTasks(selected=[]){
 document.querySelectorAll('.unlock-kind').forEach(x=>x.addEventListener('change',()=>renderTasks()));
 function readTasks(){return [...document.querySelectorAll('.unlock-kind:checked')].map(x=>({type:x.value,label:document.querySelector(`[data-task-label="${x.value}"]`)?.value.trim()||taskLabels[x.value],url:document.querySelector(`[data-task-url="${x.value}"]`)?.value.trim()||''}));}
 function resetEditor(){
- editingId=null;$('videoForm').reset();renderTasks();$('videoSubmit').innerHTML='<i class="fa-solid fa-cloud-arrow-up"></i> Publish Video';$('videoCancelEdit').classList.add('hidden');$('videoForm').scrollIntoView({behavior:'smooth',block:'start'});
+ editingId=null;$('videoForm').reset();renderTasks();updateThumbnailPreview();$('videoSubmit').innerHTML='<i class="fa-solid fa-cloud-arrow-up"></i> Publish Video';$('videoCancelEdit').classList.add('hidden');$('videoForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function startEdit(v){
  editingId=v.id;
  $('videoTitle').value=v.title||'';$('videoDescription').value=v.description||'';
- $('videoEmbed').value=v.embed_url||'';$('videoThumbnail').value=v.thumbnail_url||'';
+ $('videoEmbed').value=v.embed_url||'';$('videoThumbnail').value=v.thumbnail_url||'';updateThumbnailPreview();
  $('videoOrientation').value=v.orientation||'horizontal';$('videoDownload').value=v.download_url||'';
  renderTasks(Array.isArray(v.unlock_tasks)?v.unlock_tasks:[]);
  $('videoSubmit').innerHTML='<i class="fa-solid fa-floppy-disk"></i> Simpan perubahan';
@@ -28,7 +29,7 @@ function startEdit(v){
 }
 function renderList(){
  $('videoList').innerHTML=videos.map(v=>`<article class="paste-card admin-video-card">
- ${v.thumbnail_url?`<img src="${esc(v.thumbnail_url)}" alt="Thumbnail ${esc(v.title)}">`:'<div class="empty-state"><i class="fa-solid fa-photo-film"></i> Belum ada thumbnail</div>'}
+ <div class="vp-admin-thumb">${thumbnailMarkup(v.thumbnail_url,v.title,'vp-thumb-media')}</div>
  <div><h3>${esc(v.title)}</h3><p>${esc(v.orientation||'horizontal')} · ${Number(v.views||0)} dilihat · ${Number(v.downloads||0)} download · ${Number(v.shares||0)} share · ${v.published?'Tayang':'Draft'}</p>
  <a href="/v/${encodeURIComponent(v.slug)}" target="_blank" rel="noopener">Buka halaman video <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
  <div class="video-admin-actions"><button class="button primary" type="button" data-edit="${esc(v.id)}"><i class="fa-solid fa-pen-to-square"></i> Edit link & pengaturan</button>
@@ -52,4 +53,12 @@ $('videoForm').onsubmit=async e=>{
 };
 $('videoCancelEdit').onclick=()=>{resetEditor();status('videoStatus','Edit dibatalkan.')};
 $('videoLogout').onclick=async()=>{await call('/admin/logout',{method:'POST'});location.reload()};
-renderTasks();boot();
+function updateThumbnailPreview(){
+ const box=$('thumbnailPreview');
+ if(!box)return;
+ const value=$('videoThumbnail').value.trim();
+ box.innerHTML=value?thumbnailMarkup(value,$('videoTitle').value.trim()||'Preview thumbnail','vp-thumb-media'):'<div class="vp-thumb-placeholder"><i class="fa-solid fa-image"></i><span>Preview thumbnail akan muncul di sini</span></div>';
+}
+$('videoThumbnail').addEventListener('input',updateThumbnailPreview);
+$('videoTitle').addEventListener('input',updateThumbnailPreview);
+renderTasks();updateThumbnailPreview();boot();
