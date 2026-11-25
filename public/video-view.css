@@ -297,3 +297,24 @@
   box-shadow: none !important;
   padding: 0 !important;
 }
+
+
+/* Timed provider placements: transparent wrappers, creative-only surfaces. */
+.video-native-ad,.video-slide-ad,.video-floating-ad{position:fixed;z-index:1000;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:0!important;overflow:visible!important}
+.video-native-ad{left:50%;bottom:14px;transform:translateX(-50%);width:min(720px,calc(100vw - 16px));}
+.video-native-ad .ad-slot{width:100%;min-height:0;background:transparent!important}
+.video-native-ad iframe{display:block;width:100%;height:180px;border:0;background:transparent}
+.native-ad-close,.slide-ad-hide,.floating-ad-close{position:absolute;right:0;top:-30px;z-index:3;width:28px;height:28px;border:0;border-radius:50%;background:#111827b8;color:#fff;display:grid;place-items:center;cursor:pointer}
+.video-slide-ad{width:min(300px,calc(100vw - 12px));height:250px;left:50%;top:auto;bottom:10px;transform:translateX(-50%);background:transparent!important}
+.video-slide-ad .ad-slot{width:100%;height:250px;background:transparent!important}
+.video-slide-ad iframe{display:block;width:300px;height:250px;max-width:100%;border:0;background:transparent}
+.video-floating-ad{left:0;right:auto;bottom:72px;width:min(468px,calc(100vw - 10px));height:60px;background:transparent!important}
+.video-floating-ad .ad-slot{width:100%;height:60px;background:transparent!important}
+.video-floating-ad iframe{display:block;width:468px;height:60px;max-width:100%;border:0;background:transparent}
+.video-native-ad[hidden],.video-slide-ad[hidden],.video-floating-ad[hidden]{display:none!important}
+.video-floating-ad.ad-from-left{animation:vidpas-ad-from-left .5s ease both}
+.video-floating-ad.is-hiding{animation:vidpas-ad-out-left .35s ease both}
+.video-slide-ad.ad-from-bottom{animation:vidpas-ad-from-bottom .5s ease both}
+.video-slide-ad.is-hiding{animation:vidpas-ad-out-bottom .35s ease both}
+.community-notice{z-index:1001}
+@media(max-width:560px){.video-native-ad{bottom:8px}.video-native-ad iframe{height:160px}.video-floating-ad{bottom:68px}.video-slide-ad{bottom:8px}}

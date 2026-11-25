@@ -60,10 +60,16 @@ function platformAppHref(type, value) {
   if (!url) return "#";
   try {
     const u = new URL(url);
-    // Use normal verified HTTPS App Links. Hard-coded intent:// links were
-    // preventing some Android/Chrome versions from opening the destination app.
     if (kind === "youtube" && /(^|\.)youtube\.com$|youtu\.be$/i.test(u.hostname)) {
       u.searchParams.set("sub_confirmation", "1");
+    }
+    // Android Chrome intent links request the native app, with the exact admin
+    // URL as fallback when the app is not installed or the intent is rejected.
+    const pkg = ANDROID_APP_PACKAGES[kind];
+    if (/Android/i.test(navigator.userAgent) && pkg) {
+      const fallback = encodeURIComponent(u.href);
+      const path = `${u.host}${u.pathname}${u.search}${u.hash}`;
+      return `intent://${path}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${fallback};end`;
     }
     return u.href;
   } catch { return url; }
@@ -342,11 +348,12 @@ function loadNativeAd(slotId) {
   const frame = document.createElement("iframe");
   frame.title = "Iklan";
   frame.loading = "eager";
+  frame.referrerPolicy = "strict-origin-when-cross-origin";
   frame.style.cssText = "display:block;width:min(100%,720px);height:180px;border:0;background:transparent;overflow:hidden";
-  frame.setAttribute("allow","autoplay; fullscreen; clipboard-write");
-  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0"><div id="container-c4ddd55dc2405990669cdc39190e71f0"></div><script async fetchpriority="high" data-cfasync="false" src="https://biomanos.org/21/c4ddd55dc2405990669cdc39190e71f0"></script></body></html>`;
+  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}</style></head><body><div id="container-c4ddd55dc2405990669cdc39190e71f0"></div><script async fetchpriority="high" data-cfasync="false" src="https://biomanos.org/21/c4ddd55dc2405990669cdc39190e71f0"></script></body></html>`;
   slot.appendChild(frame);
 }
+
 function loadSocialBar() {
   if (document.querySelector('script[data-vidpas-socialbar]')) return;
   const s = document.createElement("script");
@@ -374,48 +381,89 @@ function setupPopunder() {
 }
 
 const AD_ENTRY_MOTIONS = ["ad-from-top", "ad-from-bottom", "ad-from-left", "ad-from-right", "ad-from-center"];
-const ROTATING_AD_BANNERS = [
-  {key:"140b515f1a8f1857a38ab603f51b1f10",width:320,height:50},
-  {key:"6e20a4c9dad189e23fe8642d6c242cfd",width:468,height:60},
-  {key:"100bd0c6cfd6cedb608b2e083620df0e",width:300,height:250},
-  {key:"ada5f60c5cb37f253657ef96c895a721",width:160,height:300}
-];
 let adMotionIndex = 0;
-function showSlideAd(panel) {
+function animatePanel(panel, motion, hideAfterMs, onHidden) {
   if (!panel) return;
-  panel.classList.remove("is-hiding", ...AD_ENTRY_MOTIONS);
-  const motion = AD_ENTRY_MOTIONS[adMotionIndex % AD_ENTRY_MOTIONS.length];
-  const banner = ROTATING_AD_BANNERS[adMotionIndex % ROTATING_AD_BANNERS.length];
-  adMotionIndex++;
+  panel.classList.remove("is-hiding", ...AD_ENTRY_MOTIONS, "ad-from-bottom", "ad-from-left");
   panel.classList.add(motion);
-  // Rebuild the ad iframe for the next banner format, then restart the entry animation.
-  const slot = $("slideAdSlot");
-  if (slot) { slot.dataset.loaded = ""; slot.replaceChildren(); }
-  panel.hidden = true;
-  void panel.offsetWidth;
   panel.hidden = false;
-  loadAdsterraBanner("slideAdSlot",banner.key,banner.width,banner.height,`https://biomanos.org/22/${banner.key}`);
   window.clearTimeout(panel._hideTimer);
   panel._hideTimer = window.setTimeout(() => {
     panel.classList.add("is-hiding");
-    window.setTimeout(() => { panel.hidden = true; panel.classList.remove("is-hiding"); }, 360);
-  }, 15000);
+    window.setTimeout(() => {
+      panel.hidden = true;
+      panel.classList.remove("is-hiding");
+      if (onHidden) onHidden();
+    }, 360);
+  }, hideAfterMs);
+}
+
+// 300x250: slides upward at each 15-second cycle; close button collapses it,
+// but the next scheduled cycle still runs.
+function showSlideAd(panel) {
+  if (!panel) return;
+  const slot = $("slideAdSlot");
+  if (slot) { slot.dataset.loaded = ""; slot.replaceChildren(); }
+  const bannerKey = "100bd0c6cfd6cedb608b2e083620df0e";
+  loadAdsterraBanner("slideAdSlot",bannerKey,300,250,`https://biomanos.org/22/${bannerKey}`);
+  animatePanel(panel,"ad-from-bottom",10000);
 }
 function startSlideAd() {
   const panel = $("videoSlideAd");
   if (!panel || panel.dataset.started) return;
   panel.dataset.started = "1";
-  const show = () => showSlideAd(panel);
+  const show = () => { if (document.visibilityState === "visible") showSlideAd(panel); };
   window.setTimeout(show, 5000);
-  // 15 seconds visible, then a quiet gap; cycle through all five entry motions.
-  panel._cycleTimer = window.setInterval(() => {
-    if (panel.hidden && document.visibilityState === "visible") show();
-  }, 45000);
-  $("hideSlideAd").onclick = () => {
+  panel._cycleTimer = window.setInterval(show, 15000);
+  const close = $("hideSlideAd");
+  if (close) close.onclick = () => {
     window.clearTimeout(panel._hideTimer);
     panel.classList.add("is-hiding");
-    window.setTimeout(() => { panel.hidden = true; panel.classList.remove("is-hiding"); }, 360);
+    window.setTimeout(() => { panel.hidden = true; panel.classList.remove("is-hiding"); },360);
   };
+}
+
+// 468x60: slide from left to right every 20 seconds.
+function startSideBanner() {
+  const panel = $("videoFloatingAd");
+  if (!panel || panel.dataset.started) return;
+  panel.dataset.started = "1";
+  const key = "6e20a4c9dad189e23fe8642d6c242cfd";
+  const show = () => {
+    if (document.visibilityState !== "visible") return;
+    const slot = $("floatingAdSlot");
+    if (slot) { slot.dataset.loaded = ""; slot.replaceChildren(); }
+    loadAdsterraBanner("floatingAdSlot",key,468,60,`https://biomanos.org/22/${key}`);
+    animatePanel(panel,"ad-from-left",15000);
+  };
+  window.setTimeout(show, 8000);
+  panel._cycleTimer = window.setInterval(show,20000);
+  const close = $("closeFloatingAd");
+  if (close) close.onclick = () => {
+    window.clearTimeout(panel._hideTimer);
+    panel.classList.add("is-hiding");
+    window.setTimeout(() => { panel.hidden = true; panel.classList.remove("is-hiding"); },360);
+  };
+}
+
+// Native #21 placement: visible 40 seconds, hidden for 5 seconds, repeats.
+function startNativeAdCycle() {
+  const panel = $("videoNativeAd");
+  if (!panel || panel.dataset.started) return;
+  panel.dataset.started = "1";
+  const show = () => {
+    if (document.visibilityState !== "visible") return;
+    const slot = $("nativeAdSlot");
+    if (slot) { slot.dataset.loaded = ""; slot.replaceChildren(); }
+    loadNativeAd("nativeAdSlot");
+    panel.hidden = false;
+    window.clearTimeout(panel._hideTimer);
+    panel._hideTimer = window.setTimeout(() => { panel.hidden = true; },40000);
+  };
+  show();
+  panel._cycleTimer = window.setInterval(show,45000);
+  const close = $("closeNativeAd");
+  if (close) close.onclick = () => { window.clearTimeout(panel._hideTimer); panel.hidden = true; };
 }
 let unlockedAdServicesStarted = false;
 function startUnlockedAdServices() {
@@ -423,6 +471,8 @@ function startUnlockedAdServices() {
   unlockedAdServicesStarted = true;
   loadSocialBar();
   startSlideAd();
+  startSideBanner();
+  startNativeAdCycle();
   setupCommunityNotice();
 }
 
@@ -431,22 +481,32 @@ async function setupCommunityNotice() {
   try { settings = await api("/settings"); } catch(e) { console.warn("Community links:",e); }
   const tg = safeHttpUrl(settings.video_telegram_url || DEFAULT_TELEGRAM) || DEFAULT_TELEGRAM;
   const wa = safeHttpUrl(settings.video_whatsapp_url || DEFAULT_WHATSAPP) || DEFAULT_WHATSAPP;
-  $("communityTelegram").href = tg;
-  $("communityWhatsapp").href = wa;
+  const tgLink = $("communityTelegram"), waLink = $("communityWhatsapp");
+  if (tgLink) tgLink.href = tg;
+  if (waLink) waLink.href = wa;
   const panel = $("communityNotice");
+  if (!panel) return;
   let shown = 0;
-  const times = [30000,60000,90000];
-  times.forEach(delay => setTimeout(() => {
-    if (shown >= 3) return;
+  const showNotice = () => {
+    if (shown >= 3 || document.visibilityState !== "visible") return;
     shown++;
     panel.hidden = false;
     panel.classList.remove("is-leaving");
-  },delay));
-  $("closeCommunityNotice").onclick = () => {
+    window.clearTimeout(panel._autoHide);
+    panel._autoHide = window.setTimeout(() => {
+      panel.classList.add("is-leaving");
+      window.setTimeout(() => { panel.hidden = true; panel.classList.remove("is-leaving"); },250);
+    },5000);
+  };
+  [30000,60000,90000].forEach(delay => window.setTimeout(showNotice,delay));
+  const close = $("closeCommunityNotice");
+  if (close) close.onclick = () => {
+    window.clearTimeout(panel._autoHide);
     panel.classList.add("is-leaving");
     setTimeout(() => { panel.hidden = true; },250);
   };
 }
+
 function setupActionButtons(data) {
   const likeBtn = $("likeBtn"), shareBtn = $("shareBtn"), downloadBtn = $("downloadBtn");
   const likedKey = `vidpas-liked-${slug}`;
