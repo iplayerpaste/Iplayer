@@ -425,14 +425,20 @@ function setupPopunder() {
   (document.head || document.body).appendChild(script);
 }
 
-const AD_ENTRY_MOTIONS = ["ad-from-top", "ad-from-bottom", "ad-from-left", "ad-from-right"];
+const AD_ENTRY_MOTIONS = ["ad-from-top", "ad-from-bottom", "ad-from-left", "ad-from-right", "ad-from-center"];
+
+// Rotating overlays use the exact Adsterra banner zones supplied by the publisher.
+// The delay is counted after the previous overlay is explicitly closed.
 const ROTATING_ADS = [
-  { delay: 5000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-bottom" },
+  { delay: 5000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-center" },
+  { delay: 10000, type: "banner", key: "140b515f1a8f1857a38ab603f51b1f10", width: 320, height: 50, motion: "ad-from-bottom" },
   { delay: 10000, type: "banner", key: "6e20a4c9dad189e23fe8642d6c242cfd", width: 468, height: 60, motion: "ad-from-top" },
-  { delay: 15000, type: "native", motion: "ad-from-left" },
-  { delay: 20000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-right" },
-  { delay: 25000, type: "banner", key: "6e20a4c9dad189e23fe8642d6c242cfd", width: 468, height: 60, motion: "ad-from-bottom" },
-  { delay: 30000, type: "native", motion: "ad-from-top" }
+  { delay: 15000, type: "banner", key: "ada5f60c5cb37f253657ef96c895a721", width: 160, height: 300, motion: "ad-from-left" },
+  { delay: 15000, type: "banner", key: "1057b25ea9554d63c48eb6f8a07b782b", width: 160, height: 600, motion: "ad-from-right" },
+  { delay: 20000, type: "banner", key: "a0c724147631738be4791be58f8fbaed", width: 728, height: 90, motion: "ad-from-bottom" },
+  { delay: 10000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-top" },
+  { delay: 10000, type: "banner", key: "140b515f1a8f1857a38ab603f51b1f10", width: 320, height: 50, motion: "ad-from-center" },
+  { delay: 15000, type: "native", motion: "ad-from-left" }
 ];
 let rotatingAdIndex = 0;
 let rotatingAdTimer = null;
@@ -440,7 +446,39 @@ let rotatingAdOpen = false;
 
 function clearRotatingAdSlot() {
   const slot = $("slideAdSlot");
-  if (slot) { slot.dataset.loaded = ""; slot.replaceChildren(); slot.className = "ad-slot"; }
+  const panel = $("videoSlideAd");
+  if (slot) {
+    slot.dataset.loaded = "";
+    slot.replaceChildren();
+    slot.className = "ad-slot";
+    slot.removeAttribute("style");
+  }
+  if (panel) {
+    panel.style.removeProperty("width");
+    panel.style.removeProperty("height");
+  }
+}
+function fitRotatingBanner(width, height) {
+  const panel = $("videoSlideAd");
+  const slot = $("slideAdSlot");
+  const frame = slot && slot.querySelector("iframe");
+  if (!panel || !slot || !frame) return;
+  const availableWidth = Math.max(240, window.innerWidth - 28);
+  const availableHeight = Math.max(180, window.innerHeight - 90);
+  const scale = Math.min(1, availableWidth / width, availableHeight / height);
+  const scaledWidth = Math.round(width * scale);
+  const scaledHeight = Math.round(height * scale);
+  panel.style.setProperty("width", `${scaledWidth}px`, "important");
+  panel.style.setProperty("height", `${scaledHeight}px`, "important");
+  slot.style.width = `${scaledWidth}px`;
+  slot.style.height = `${scaledHeight}px`;
+  slot.style.overflow = "hidden";
+  slot.style.flex = "none";
+  frame.style.width = `${width}px`;
+  frame.style.height = `${height}px`;
+  frame.style.maxWidth = "none";
+  frame.style.transform = `scale(${scale})`;
+  frame.style.transformOrigin = "top left";
 }
 function renderRotatingAd(item) {
   const panel = $("videoSlideAd");
@@ -453,8 +491,14 @@ function renderRotatingAd(item) {
   panel.classList.toggle("ad-size-native", item.type === "native");
   if (item.type === "native") {
     loadNativeAd("slideAdSlot");
+    slot.style.width = "min(320px, calc(100vw - 28px))";
+    slot.style.height = "180px";
+    slot.style.overflow = "hidden";
+    panel.style.setProperty("width", "min(320px, calc(100vw - 28px))", "important");
+    panel.style.setProperty("height", "180px", "important");
   } else {
     loadAdsterraBanner("slideAdSlot", item.key, item.width, item.height, `https://biomanos.org/22/${item.key}`);
+    fitRotatingBanner(item.width, item.height);
   }
   panel.classList.add(item.motion);
   panel.hidden = false;
@@ -463,16 +507,12 @@ function renderRotatingAd(item) {
 function scheduleNextRotatingAd() {
   window.clearTimeout(rotatingAdTimer);
   rotatingAdTimer = null;
-  // Never queue a second creative over an ad that is still open. The next
-  // interval starts only after the visitor explicitly closes the current ad.
   if (rotatingAdOpen) return;
   const next = ROTATING_ADS[rotatingAdIndex];
   if (!next) return;
   rotatingAdTimer = window.setTimeout(() => {
     rotatingAdTimer = null;
     if (rotatingAdOpen) return;
-    // Do not display an overlay while the tab is in the background. Restart
-    // this item's full interval when the page becomes visible again.
     if (document.visibilityState !== "visible") {
       scheduleNextRotatingAd();
       return;
@@ -486,8 +526,7 @@ function startRotatingAdSequence() {
   if (!panel || !close || panel.dataset.started) return;
   panel.dataset.started = "1";
   close.addEventListener("click", () => {
-    // X is the only way to dismiss a rotating creative. Once closed, the next
-    // creative gets its own delay; no creative is automatically hidden.
+    // The creative stays visible until the visitor deliberately closes it.
     if (!rotatingAdOpen) return;
     rotatingAdOpen = false;
     panel.hidden = true;
@@ -496,8 +535,12 @@ function startRotatingAdSequence() {
     rotatingAdIndex = (rotatingAdIndex + 1) % ROTATING_ADS.length;
     scheduleNextRotatingAd();
   });
-  // First ad: 5 seconds after video access opens. Every later delay is counted
-  // from the moment the visitor taps X on the preceding ad.
+  // Re-fit the active creative if the Android device rotates or resizes.
+  window.addEventListener("resize", () => {
+    if (!rotatingAdOpen) return;
+    const item = ROTATING_ADS[rotatingAdIndex];
+    if (item && item.type === "banner") fitRotatingBanner(item.width, item.height);
+  }, { passive: true });
   rotatingAdIndex = 0;
   scheduleNextRotatingAd();
 }

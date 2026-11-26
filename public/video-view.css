@@ -371,3 +371,35 @@
 @keyframes vidpas-ad-from-bottom{from{opacity:0;transform:translate(-50%,60%)}to{opacity:1;transform:translate(-50%,-50%)}}
 @keyframes vidpas-ad-from-left{from{opacity:0;transform:translate(-160%,-50%)}to{opacity:1;transform:translate(-50%,-50%)}}
 @keyframes vidpas-ad-from-right{from{opacity:0;transform:translate(60%,-50%)}to{opacity:1;transform:translate(-50%,-50%)}}
+
+
+/* Responsive rotating Adsterra overlay creatives */
+.video-slide-ad{
+  position:fixed!important;z-index:12000!important;left:50%!important;top:50%!important;
+  right:auto!important;bottom:auto!important;transform:translate(-50%,-50%);
+  display:flex;align-items:flex-start;justify-content:flex-start;padding:0!important;
+  margin:0!important;max-width:none!important;min-width:0!important;min-height:0!important;
+  background:transparent!important;border:0!important;border-radius:0!important;
+  box-shadow:none!important;overflow:visible!important;
+}
+.video-slide-ad[hidden]{display:none!important}
+.video-slide-ad .ad-slot{display:block;padding:0!important;margin:0!important;background:transparent!important}
+.video-slide-ad iframe{display:block;border:0!important;background:transparent!important}
+.video-slide-ad .slide-ad-hide{
+  position:absolute!important;top:-34px!important;right:0!important;left:auto!important;
+  width:30px!important;height:30px!important;border:1px solid #fff!important;
+  border-radius:50%!important;background:#111827e8!important;color:#fff!important;
+  display:grid!important;place-items:center!important;z-index:12002!important;
+  box-shadow:0 3px 12px #0005!important;
+}
+.video-slide-ad.ad-from-center{left:50%!important;top:50%!important;right:auto!important;bottom:auto!important;animation:vidpas-ad-from-center .4s ease both}
+.video-slide-ad.ad-from-top{left:50%!important;top:0!important;right:auto!important;bottom:auto!important;transform:translateX(-50%);animation:vidpas-ad-from-top .4s ease both}
+.video-slide-ad.ad-from-bottom{left:50%!important;top:auto!important;right:auto!important;bottom:0!important;transform:translateX(-50%);animation:vidpas-ad-from-bottom .4s ease both}
+.video-slide-ad.ad-from-left{left:0!important;top:50%!important;right:auto!important;bottom:auto!important;transform:translateY(-50%);animation:vidpas-ad-from-left .4s ease both}
+.video-slide-ad.ad-from-right{left:auto!important;top:50%!important;right:0!important;bottom:auto!important;transform:translateY(-50%);animation:vidpas-ad-from-right .4s ease both}
+@media(max-width:480px){
+  .video-slide-ad.ad-from-left{left:8px!important}
+  .video-slide-ad.ad-from-right{right:8px!important}
+}
+
+.video-slide-ad.ad-size-native iframe{width:100%!important;height:180px!important;max-width:100%!important}
