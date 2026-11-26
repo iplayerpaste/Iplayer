@@ -16,8 +16,6 @@ const platforms = {
 const DEFAULT_TELEGRAM = "https://t.me/vidpas";
 const DEFAULT_WHATSAPP = "https://whatsapp.com/channel/0029VbEU8HWIt5rxVZ1eFg3c";
 let videoData = null, tasks = [], unlocked = false, saved = {}, adBannerQueue = Promise.resolve();
-let bannerRotationTimer = 0, bannerHideTimer = 0, bannerSnoozeUntil = 0;
-let bannerRotationStartedAt = 0, bannerRotationIndex = 0, bannerRotationStarted = false;
 const pageEnteredAt = Date.now();
 
 async function api(path, options = {}) {
@@ -372,42 +370,35 @@ function queueAd(callback) {
   })).catch(error => console.warn("Ad queue:", error));
   return adBannerQueue;
 }
-function mountAdIframe(slot, width, height, srcdoc) {
-  if (!slot) return;
-  const availableWidth = Math.max(160, window.innerWidth - 24);
-  const scale = Math.min(1, availableWidth / width);
-  const renderedWidth = Math.round(width * scale);
-  const renderedHeight = Math.round(height * scale);
-  slot.style.position = "relative";
-  slot.style.width = `${renderedWidth}px`;
-  slot.style.height = `${renderedHeight}px`;
-  slot.style.maxWidth = "100%";
-  slot.style.overflow = "hidden";
+function loadAdsterraBanner(slotId,key,width,height,src) {
+  const slot = $(slotId);
+  if (!slot || slot.dataset.loaded) return;
+  slot.dataset.loaded = "1";
   const frame = document.createElement("iframe");
   frame.title = "Iklan";
   frame.width = String(width);
   frame.height = String(height);
   frame.loading = "eager";
   frame.referrerPolicy = "strict-origin-when-cross-origin";
-  frame.setAttribute("allow", "autoplay; fullscreen; clipboard-write");
-  frame.style.cssText = `position:absolute;top:0;left:0;display:block;border:0;width:${width}px;height:${height}px;max-width:none;transform:scale(${scale});transform-origin:top left;background:transparent;overflow:hidden`;
-  frame.srcdoc = srcdoc;
+  frame.setAttribute("allow","autoplay; fullscreen; clipboard-write");
+  frame.style.cssText = `display:block;border:0;max-width:100%;width:${width}px;height:${height}px;background:transparent;overflow:hidden`;
+  const code = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;width:${width}px;height:${height}px;overflow:hidden;background:transparent}</style></head><body><script>var atOptions=${JSON.stringify({key,format:"iframe",height,width,params:{}})};</script><script data-cfasync="false" src="${src}"></script></body></html>`;
+  frame.srcdoc = code;
   slot.appendChild(frame);
-}
-function loadAdsterraBanner(slotId,key,width,height,src) {
-  const slot = $(slotId);
-  if (!slot || slot.dataset.loaded === "1") return;
-  slot.dataset.loaded = "1";
-  const code = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=${width},initial-scale=1"><style>html,body{margin:0;padding:0;width:${width}px;height:${height}px;overflow:hidden;background:transparent}</style></head><body><script>var atOptions=${JSON.stringify({key,format:"iframe",height,width,params:{}})};</script><script data-cfasync="false" src="${src}"></script></body></html>`;
-  mountAdIframe(slot,width,height,code);
 }
 function loadNativeAd(slotId) {
   const slot = $(slotId);
-  if (!slot || slot.dataset.loaded === "1") return;
+  if (!slot || slot.dataset.loaded) return;
   slot.dataset.loaded = "1";
-  const code = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=720,initial-scale=1"><style>html,body{margin:0;padding:0;width:720px;height:180px;background:transparent;overflow:hidden}</style></head><body><div id="container-c4ddd55dc2405990669cdc39190e71f0"></div><script async fetchpriority="high" data-cfasync="false" src="https://biomanos.org/21/c4ddd55dc2405990669cdc39190e71f0"></script></body></html>`;
-  mountAdIframe(slot,720,180,code);
+  const frame = document.createElement("iframe");
+  frame.title = "Iklan";
+  frame.loading = "eager";
+  frame.referrerPolicy = "strict-origin-when-cross-origin";
+  frame.style.cssText = "display:block;width:min(100%,720px);height:180px;border:0;background:transparent;overflow:hidden";
+  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}</style></head><body><div id="container-c4ddd55dc2405990669cdc39190e71f0"></div><script async fetchpriority="high" data-cfasync="false" src="https://biomanos.org/21/c4ddd55dc2405990669cdc39190e71f0"></script></body></html>`;
+  slot.appendChild(frame);
 }
+
 function loadSocialBar() {
   if (document.querySelector('script[data-vidpas-socialbar]')) return;
   const s = document.createElement("script");
@@ -434,138 +425,79 @@ function setupPopunder() {
   (document.head || document.body).appendChild(script);
 }
 
-const AD_ENTRY_MOTIONS = ["ad-from-bottom", "ad-from-top", "ad-from-left", "ad-from-right"];
+const AD_ENTRY_MOTIONS = ["ad-from-top", "ad-from-bottom", "ad-from-left", "ad-from-right"];
 const ROTATING_ADS = [
-  { type:"banner", key:"100bd0c6cfd6cedb608b2e083620df0e", width:300, height:250, src:"https://biomanos.org/22/100bd0c6cfd6cedb608b2e083620df0e", motion:"ad-from-bottom", sizeClass:"ad-size-300" },
-  { type:"banner", key:"6e20a4c9dad189e23fe8642d6c242cfd", width:468, height:60, src:"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd", motion:"ad-from-top", sizeClass:"ad-size-468" },
-  { type:"native", width:720, height:180, motion:"ad-from-left", sizeClass:"ad-size-native" },
-  { type:"banner", key:"100bd0c6cfd6cedb608b2e083620df0e", width:300, height:250, src:"https://biomanos.org/22/100bd0c6cfd6cedb608b2e083620df0e", motion:"ad-from-right", sizeClass:"ad-size-300" },
-  { type:"banner", key:"6e20a4c9dad189e23fe8642d6c242cfd", width:468, height:60, src:"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd", motion:"ad-from-bottom", sizeClass:"ad-size-468" },
-  { type:"native", width:720, height:180, motion:"ad-from-top", sizeClass:"ad-size-native" }
+  { delay: 5000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-bottom" },
+  { delay: 10000, type: "banner", key: "6e20a4c9dad189e23fe8642d6c242cfd", width: 468, height: 60, motion: "ad-from-top" },
+  { delay: 15000, type: "native", motion: "ad-from-left" },
+  { delay: 20000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-right" },
+  { delay: 25000, type: "banner", key: "6e20a4c9dad189e23fe8642d6c242cfd", width: 468, height: 60, motion: "ad-from-bottom" },
+  { delay: 30000, type: "native", motion: "ad-from-top" }
 ];
-const BANNER_VISIBLE_MS = 15000;
-const BANNER_CLOSE_PAUSE_MS = 20000;
-const BANNER_BREAK_INTERVAL_MS = 120000;
-const BANNER_BREAK_DURATION_MS = 10000;
+let rotatingAdIndex = 0;
+let rotatingAdTimer = null;
+let rotatingAdOpen = false;
 
-function bannerBreakRemaining(now = Date.now()) {
-  if (!bannerRotationStartedAt) return 0;
-  const elapsed = Math.max(0, now - bannerRotationStartedAt);
-  if (elapsed < BANNER_BREAK_INTERVAL_MS) return 0;
-  const phase = elapsed % BANNER_BREAK_INTERVAL_MS;
-  return phase < BANNER_BREAK_DURATION_MS ? BANNER_BREAK_DURATION_MS - phase : 0;
-}
-function timeUntilNextBannerBreak(now = Date.now()) {
-  if (!bannerRotationStartedAt) return BANNER_BREAK_INTERVAL_MS;
-  const elapsed = Math.max(0, now - bannerRotationStartedAt);
-  const phase = elapsed % BANNER_BREAK_INTERVAL_MS;
-  if (elapsed < BANNER_BREAK_INTERVAL_MS) return BANNER_BREAK_INTERVAL_MS - elapsed;
-  if (phase < BANNER_BREAK_DURATION_MS) return 0;
-  return BANNER_BREAK_INTERVAL_MS - phase;
-}
-function clearBannerOverlay({ removeCreative = false } = {}) {
-  const panel = $("videoSlideAd");
+function clearRotatingAdSlot() {
   const slot = $("slideAdSlot");
-  if (!panel) return;
-  window.clearTimeout(bannerHideTimer);
-  panel.hidden = true;
-  panel.classList.remove("is-hiding", ...AD_ENTRY_MOTIONS, "ad-size-300", "ad-size-468", "ad-size-native");
-  if (removeCreative && slot) {
-    slot.dataset.loaded = "";
-    slot.replaceChildren();
-    slot.removeAttribute("style");
-  }
+  if (slot) { slot.dataset.loaded = ""; slot.replaceChildren(); slot.className = "ad-slot"; }
 }
-function hideBannerOverlay({ snooze = false, animate = true, schedule = true } = {}) {
-  const panel = $("videoSlideAd");
-  if (!panel) return;
-  window.clearTimeout(bannerHideTimer);
-  if (snooze) bannerSnoozeUntil = Date.now() + BANNER_CLOSE_PAUSE_MS;
-  if (panel.hidden) {
-    if (schedule) scheduleBannerRotation(snooze ? BANNER_CLOSE_PAUSE_MS : 0);
-    return;
-  }
-  if (!animate) {
-    clearBannerOverlay({ removeCreative:true });
-    if (schedule) scheduleBannerRotation(0);
-    return;
-  }
-  panel.classList.add("is-hiding");
-  window.setTimeout(() => {
-    clearBannerOverlay({ removeCreative:true });
-    if (schedule) scheduleBannerRotation(0);
-  }, 360);
-}
-function scheduleBannerRotation(delay = 0) {
-  window.clearTimeout(bannerRotationTimer);
-  if (!bannerRotationStarted) return;
-  bannerRotationTimer = window.setTimeout(runBannerRotation, Math.max(0, delay));
-}
-function runBannerRotation() {
-  if (!bannerRotationStarted) return;
+function renderRotatingAd(item) {
   const panel = $("videoSlideAd");
   const slot = $("slideAdSlot");
   if (!panel || !slot) return;
-  const now = Date.now();
-  if (document.visibilityState !== "visible") {
-    clearBannerOverlay({ removeCreative:false });
-    scheduleBannerRotation(1000);
-    return;
-  }
-
-  const breakRemaining = bannerBreakRemaining(now);
-  const closePauseRemaining = Math.max(0, bannerSnoozeUntil - now);
-  const pauseRemaining = Math.max(breakRemaining, closePauseRemaining);
-  if (pauseRemaining > 0) {
-    clearBannerOverlay({ removeCreative:true });
-    scheduleBannerRotation(pauseRemaining);
-    return;
-  }
-
-  const item = ROTATING_ADS[bannerRotationIndex % ROTATING_ADS.length];
-  bannerRotationIndex += 1;
-  clearBannerOverlay({ removeCreative:true });
-  panel.classList.add(item.motion, item.sizeClass);
-  panel.hidden = false;
-
+  clearRotatingAdSlot();
+  panel.classList.remove("is-hiding", ...AD_ENTRY_MOTIONS);
+  panel.classList.toggle("ad-size-300", item.type === "banner" && item.width === 300);
+  panel.classList.toggle("ad-size-468", item.type === "banner" && item.width === 468);
+  panel.classList.toggle("ad-size-native", item.type === "native");
   if (item.type === "native") {
     loadNativeAd("slideAdSlot");
   } else {
-    loadAdsterraBanner("slideAdSlot", item.key, item.width, item.height, item.src);
+    loadAdsterraBanner("slideAdSlot", item.key, item.width, item.height, `https://biomanos.org/22/${item.key}`);
   }
-
-  // Keep the overlay visible for one 15-second turn, but end it at the start
-  // of the scheduled 2-minute ad-free window when that occurs sooner.
-  const untilBreak = timeUntilNextBannerBreak(now);
-  const visibleFor = untilBreak > 0 ? Math.min(BANNER_VISIBLE_MS, untilBreak) : BANNER_VISIBLE_MS;
-  bannerHideTimer = window.setTimeout(() => hideBannerOverlay({ animate:true, schedule:true }), visibleFor);
+  panel.classList.add(item.motion);
+  panel.hidden = false;
+  rotatingAdOpen = true;
 }
-function startBannerRotation() {
-  if (bannerRotationStarted) return;
-  bannerRotationStarted = true;
-  bannerRotationStartedAt = Date.now();
-  bannerRotationIndex = 0;
-  bannerSnoozeUntil = 0;
-  const close = $("hideSlideAd");
-  if (close) close.onclick = () => hideBannerOverlay({ snooze:true, animate:true, schedule:true });
-  document.addEventListener("visibilitychange", () => {
+function scheduleNextRotatingAd() {
+  window.clearTimeout(rotatingAdTimer);
+  const next = ROTATING_ADS[rotatingAdIndex];
+  if (!next) return;
+  rotatingAdTimer = window.setTimeout(() => {
     if (document.visibilityState !== "visible") {
-      window.clearTimeout(bannerRotationTimer);
-      window.clearTimeout(bannerHideTimer);
-      clearBannerOverlay({ removeCreative:false });
-    } else {
-      scheduleBannerRotation(0);
+      scheduleNextRotatingAd();
+      return;
     }
-  });
-  // The first creative starts shortly after the video becomes available.
-  scheduleBannerRotation(5000);
+    renderRotatingAd(next);
+  }, next.delay);
 }
+function startRotatingAdSequence() {
+  const panel = $("videoSlideAd");
+  const close = $("hideSlideAd");
+  if (!panel || panel.dataset.started) return;
+  panel.dataset.started = "1";
+  if (close) close.onclick = () => {
+    if (!rotatingAdOpen) return;
+    rotatingAdOpen = false;
+    panel.hidden = true;
+    panel.classList.remove("is-hiding", ...AD_ENTRY_MOTIONS);
+    clearRotatingAdSlot();
+    rotatingAdIndex = (rotatingAdIndex + 1) % ROTATING_ADS.length;
+    scheduleNextRotatingAd();
+  };
+  // The first creative appears after its own 5-second interval. Each following
+  // creative waits for its listed interval AFTER the user closes the current one.
+  rotatingAdIndex = 0;
+  scheduleNextRotatingAd();
+}
+
 let unlockedAdServicesStarted = false;
 function startUnlockedAdServices() {
   if (unlockedAdServicesStarted) return;
   unlockedAdServicesStarted = true;
   loadSocialBar();
-  startBannerRotation();
+  startRotatingAdSequence();
   setupCommunityNotice();
 }
 
@@ -644,8 +576,6 @@ function buildLockedPage(data) {
   const related = $("relatedSection");
   if (related) related.hidden = true;
   mountUnlockGate();
-  // Social Bar is intentionally initialized while the Sub to Unlock gate is visible.
-  loadSocialBar();
 }
 function buildUnlockedPage(data) {
   videoData = data;
