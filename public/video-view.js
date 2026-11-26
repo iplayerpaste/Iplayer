@@ -411,26 +411,43 @@ function createTimedAdFrame(item) {
   return wrap;
 }
 
+const timedAdPanels = new Map();
+const timedAdTimers = new Map();
+
+function scheduleTimedAd(item, delay = item.delay) {
+  window.clearTimeout(timedAdTimers.get(item.id));
+  timedAdTimers.set(item.id, window.setTimeout(() => runTimedAdWhenVisible(item), delay));
+}
+
 function showTimedAd(item) {
   const layer = $("timedAdLayer");
-  if (!layer || layer.querySelector(`[data-ad-id="${item.id}"]`)) return;
-
-  const panel = document.createElement("section");
+  if (!layer) return;
+  let panel = timedAdPanels.get(item.id);
+  if (panel) {
+    panel.hidden = false;
+    panel.classList.remove(item.motion);
+    void panel.offsetWidth;
+    panel.classList.add(item.motion);
+    return;
+  }
+  panel = document.createElement("section");
   panel.className = `timed-ad-panel ${item.motion}`;
   panel.dataset.adId = item.id;
   panel.setAttribute("role", "region");
   panel.setAttribute("aria-label", item.label);
-
   const close = document.createElement("button");
   close.type = "button";
   close.className = "timed-ad-close";
   close.setAttribute("aria-label", `Tutup ${item.label}`);
   close.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
-  close.addEventListener("click", () => panel.remove(), { once: true });
-
+  close.addEventListener("click", () => {
+    panel.hidden = true;
+    scheduleTimedAd(item, item.delay);
+  });
   panel.appendChild(createTimedAdFrame(item));
   panel.appendChild(close);
   layer.appendChild(panel);
+  timedAdPanels.set(item.id, panel);
 }
 
 function runTimedAdWhenVisible(item) {
@@ -447,9 +464,9 @@ function runTimedAdWhenVisible(item) {
 }
 
 function startTimedAdPlacements() {
-  // Delays are all measured from the moment the video becomes available.
-  // They are independent one-shot timers, not a queue and not auto-refreshes.
-  TIMED_ADS.forEach(item => window.setTimeout(() => runTimedAdWhenVisible(item), item.delay));
+  // First appearance is timed from video availability; after closing, each
+  // placement reappears after its own interval without reloading its iframe.
+  TIMED_ADS.forEach(item => scheduleTimedAd(item, item.delay));
 }
 
 function loadSocialBar() {
@@ -570,7 +587,13 @@ function buildUnlockedPage(data) {
   root.innerHTML = `<section class="video-gate-shell">
     <header class="video-publisher-heading"><span>VIDEO VIDPAS</span></header>
     <section class="video-info"><div class="video-info-main"><h1>${esc(data.title)}</h1><p class="video-description">${esc(data.description || "Belum ada deskripsi untuk video ini.")}</p></div></section>
+    <div class="video-inline-ad video-inline-ad-top" aria-label="Advertisement">
+      <iframe title="Banner iklan di atas video" width="468" height="60" loading="eager" scrolling="no" src="/adsterra/banner.html?key=6e20a4c9dad189e23fe8642d6c242cfd"></iframe>
+    </div>
     <section class="video-stage-wrap" id="videoStage"><div class="video-player-loading"><span class="loading-spinner"></span></div></section>
+    <div class="video-inline-ad video-inline-ad-bottom" aria-label="Advertisement">
+      <iframe title="Banner iklan di bawah video" width="320" height="50" loading="eager" scrolling="no" src="/adsterra/banner.html?key=140b515f1a8f1857a38ab603f51b1f10"></iframe>
+    </div>
     <section class="video-info video-info-meta"><div class="video-info-main"><div class="video-metrics"><span><i class="fa-regular fa-eye"></i><b>${Number(data.views||0).toLocaleString("id-ID")}</b> views</span><span><i class="fa-solid fa-heart"></i><b id="likeCount">${Number(data.likes||0).toLocaleString("id-ID")}</b> likes</span><span><i class="fa-solid fa-calendar-days"></i>${data.created_at?new Date(data.created_at).toLocaleDateString("id-ID"):"Vidpas"}</span></div></div></section>
     <section class="video-actions-panel" id="videoActions"><div class="video-actions-row">
       <button class="video-action-btn like" id="likeBtn" type="button"><i class="fa-regular fa-heart"></i><span>Like</span><b id="likeButtonCount">${Number(data.likes||0).toLocaleString("id-ID")}</b></button>
