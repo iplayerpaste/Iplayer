@@ -462,9 +462,17 @@ function renderRotatingAd(item) {
 }
 function scheduleNextRotatingAd() {
   window.clearTimeout(rotatingAdTimer);
+  rotatingAdTimer = null;
+  // Never queue a second creative over an ad that is still open. The next
+  // interval starts only after the visitor explicitly closes the current ad.
+  if (rotatingAdOpen) return;
   const next = ROTATING_ADS[rotatingAdIndex];
   if (!next) return;
   rotatingAdTimer = window.setTimeout(() => {
+    rotatingAdTimer = null;
+    if (rotatingAdOpen) return;
+    // Do not display an overlay while the tab is in the background. Restart
+    // this item's full interval when the page becomes visible again.
     if (document.visibilityState !== "visible") {
       scheduleNextRotatingAd();
       return;
@@ -475,9 +483,11 @@ function scheduleNextRotatingAd() {
 function startRotatingAdSequence() {
   const panel = $("videoSlideAd");
   const close = $("hideSlideAd");
-  if (!panel || panel.dataset.started) return;
+  if (!panel || !close || panel.dataset.started) return;
   panel.dataset.started = "1";
-  if (close) close.onclick = () => {
+  close.addEventListener("click", () => {
+    // X is the only way to dismiss a rotating creative. Once closed, the next
+    // creative gets its own delay; no creative is automatically hidden.
     if (!rotatingAdOpen) return;
     rotatingAdOpen = false;
     panel.hidden = true;
@@ -485,9 +495,9 @@ function startRotatingAdSequence() {
     clearRotatingAdSlot();
     rotatingAdIndex = (rotatingAdIndex + 1) % ROTATING_ADS.length;
     scheduleNextRotatingAd();
-  };
-  // The first creative appears after its own 5-second interval. Each following
-  // creative waits for its listed interval AFTER the user closes the current one.
+  });
+  // First ad: 5 seconds after video access opens. Every later delay is counted
+  // from the moment the visitor taps X on the preceding ad.
   rotatingAdIndex = 0;
   scheduleNextRotatingAd();
 }
@@ -575,6 +585,9 @@ function buildLockedPage(data) {
   root.innerHTML = `<div class="video-gate-shell"><div id="lockedPlayerArea" class="locked-player-area is-locked">${lockedMarkup()}</div></div>`;
   const related = $("relatedSection");
   if (related) related.hidden = true;
+  // Social Bar is part of the Sub to Unlock experience, so load it while the
+  // task gate is visible instead of waiting until the video has been unlocked.
+  loadSocialBar();
   mountUnlockGate();
 }
 function buildUnlockedPage(data) {
@@ -622,8 +635,8 @@ window.addEventListener("pageshow", event => {
 
 (async () => {
   try {
-    // Locked Sub to Unlock page: only the popunder provider is initialized.
-    // Banner rotations, social bar and other ad placements start after unlock.
+    // Initialize popunder on page entry. Social Bar is loaded by buildLockedPage
+    // for Sub to Unlock, or by startUnlockedAdServices for directly accessible videos.
     setupPopunder();
     const d = await api(`/videos/${encodeURIComponent(slug)}`);
     if (!d || !d.title) throw Error("Video tidak ditemukan.");
