@@ -403,3 +403,37 @@
 }
 
 .video-slide-ad.ad-size-native iframe{width:100%!important;height:180px!important;max-width:100%!important}
+
+
+/* Independent Adsterra overlays: all scheduled creatives remain closeable together. */
+.timed-ad-layer{
+  position:fixed;inset:0;z-index:12000;display:flex;flex-direction:column;align-items:center;
+  gap:10px;padding:22px 12px 18px;box-sizing:border-box;height:100dvh;max-height:100dvh;overflow-x:hidden;overflow-y:auto;
+  justify-content:safe center;pointer-events:none;scrollbar-width:none;overscroll-behavior:contain;
+}
+.timed-ad-layer:empty{display:none}
+.timed-ad-layer::-webkit-scrollbar{display:none}
+.timed-ad-panel{position:relative;display:flex;flex:0 0 auto;align-items:center;justify-content:center;max-width:calc(100vw - 30px);padding-top:30px;box-sizing:content-box;overflow:visible;pointer-events:auto;isolation:isolate}
+.timed-ad-frame-wrap{position:relative;display:block;flex:0 0 auto;overflow:visible;background:transparent}
+.timed-ad-frame-wrap iframe{display:block;border:0!important;max-width:none!important;max-height:none!important;background:transparent!important;transform-origin:top left}
+.timed-ad-close{
+  position:absolute;top:0;right:-5px;z-index:5;width:29px;height:29px;display:grid;place-items:center;
+  border:1px solid #fff;border-radius:50%;background:#111827ed;color:#fff;font-size:13px;line-height:1;
+  box-shadow:0 3px 12px #0005;cursor:pointer;touch-action:manipulation
+}
+.timed-ad-close:focus-visible{outline:3px solid #8ab4ff;outline-offset:2px}
+.timed-ad-panel.from-top{animation:timed-ad-from-top .48s cubic-bezier(.2,.8,.2,1) both}
+.timed-ad-panel.from-bottom{animation:timed-ad-from-bottom .48s cubic-bezier(.2,.8,.2,1) both}
+.timed-ad-panel.from-left{animation:timed-ad-from-left .48s cubic-bezier(.2,.8,.2,1) both}
+.timed-ad-panel.from-right{animation:timed-ad-from-right .48s cubic-bezier(.2,.8,.2,1) both}
+.timed-ad-panel.from-center{animation:timed-ad-from-center .42s cubic-bezier(.2,.8,.2,1) both}
+@keyframes timed-ad-from-top{from{opacity:0;transform:translateY(-110vh)}to{opacity:1;transform:translateY(0)}}
+@keyframes timed-ad-from-bottom{from{opacity:0;transform:translateY(110vh)}to{opacity:1;transform:translateY(0)}}
+@keyframes timed-ad-from-left{from{opacity:0;transform:translateX(-110vw)}to{opacity:1;transform:translateX(0)}}
+@keyframes timed-ad-from-right{from{opacity:0;transform:translateX(110vw)}to{opacity:1;transform:translateX(0)}}
+@keyframes timed-ad-from-center{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.timed-ad-panel{animation:none!important}}
+@media(max-width:560px){
+  .timed-ad-layer{gap:10px;padding:18px 12px 14px}
+  .timed-ad-close{top:0;right:-2px;width:28px;height:28px}
+}

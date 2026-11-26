@@ -15,7 +15,7 @@ const platforms = {
 };
 const DEFAULT_TELEGRAM = "https://t.me/vidpas";
 const DEFAULT_WHATSAPP = "https://whatsapp.com/channel/0029VbEU8HWIt5rxVZ1eFg3c";
-let videoData = null, tasks = [], unlocked = false, saved = {}, adBannerQueue = Promise.resolve();
+let videoData = null, tasks = [], unlocked = false, saved = {};
 const pageEnteredAt = Date.now();
 
 async function api(path, options = {}) {
@@ -354,65 +354,104 @@ function renderRelated() {
     const first = items.slice(0,2).map(card).join("");
     const middle = items.slice(2,6).map(card).join("");
     const last = items.slice(6,8).map(card).join("");
-    grid.innerHTML = `${first}<div class="related-ad related-ad-square"><div id="relatedBanner300" class="ad-slot ad-300x250"></div></div>${middle}<div class="related-ad related-ad-bottom"><div id="relatedBanner468" class="ad-slot ad-468x60"></div></div>${last}`;
-    // Banner placements follow the requested groups: after videos 1–2 and 5–6.
-    queueAd(() => loadAdsterraBanner("relatedBanner300","100bd0c6cfd6cedb608b2e083620df0e",300,250,"https://biomanos.org/22/100bd0c6cfd6cedb608b2e083620df0e"));
-    queueAd(() => loadAdsterraBanner("relatedBanner468","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd"));
+    grid.innerHTML = `${first}${middle}${last}`;
   }).catch(e => { console.warn("Related videos:",e); grid.classList.add("hidden"); empty.classList.remove("hidden"); });
 }
 
-/* Adsterra display placements. Popunder is intentionally not auto-triggered on every
-   task click or timer: repeated forced popups can create invalid/accidental ad traffic. */
-function queueAd(callback) {
-  adBannerQueue = adBannerQueue.then(() => new Promise(resolve => {
-    callback();
-    setTimeout(resolve, 3000);
-  })).catch(error => console.warn("Ad queue:", error));
-  return adBannerQueue;
-}
-function loadAdsterraBanner(slotId,key,width,height,src) {
-  const slot = $(slotId);
-  if (!slot || slot.dataset.loaded === "1") return;
-  slot.dataset.loaded = "1";
+/* Adsterra placements: each zone has its own one-shot timer and panel.
+   Every creative remains visible until its own close button is pressed. */
+const TIMED_ADS = [
+  { id: "ad-468x60", delay: 4000, key: "6e20a4c9dad189e23fe8642d6c242cfd", width: 468, height: 60, motion: "from-top", label: "Banner 468 x 60" },
+  { id: "ad-300x250", delay: 5000, key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "from-center", label: "Banner 300 x 250" },
+  { id: "ad-160x300", delay: 6000, key: "ada5f60c5cb37f253657ef96c895a721", width: 160, height: 300, motion: "from-bottom", label: "Banner 160 x 300" },
+  { id: "ad-728x90", delay: 12000, key: "a0c724147631738be4791be58f8fbaed", width: 728, height: 90, motion: "from-left", label: "Banner 728 x 90" },
+  { id: "ad-native", delay: 15000, type: "native", motion: "from-center", label: "Native Banner" },
+  { id: "ad-320x50", delay: 17000, key: "140b515f1a8f1857a38ab603f51b1f10", width: 320, height: 50, motion: "from-right", label: "Banner 320 x 50" }
+];
 
-  // Separate iframe per placement prevents atOptions collisions between sizes.
+function createTimedAdFrame(item) {
+  const wrap = document.createElement("div");
+  wrap.className = "timed-ad-frame-wrap";
   const frame = document.createElement("iframe");
-  frame.title = `Advertisement ${width}x${height}`;
-  frame.width = String(width);
-  frame.height = String(height);
+  frame.title = item.label;
   frame.loading = "eager";
-  frame.referrerPolicy = "no-referrer-when-downgrade";
+  frame.referrerPolicy = "strict-origin-when-cross-origin";
+  frame.setAttribute("scrolling", "no");
   frame.setAttribute("allow", "autoplay; fullscreen");
-  frame.setAttribute("scrolling", "no");
-  frame.style.cssText = `display:block;border:0;max-width:100%;width:${width}px;height:${height}px;background:transparent;overflow:hidden`;
-  frame.addEventListener("error", () => console.warn(`Adsterra banner gagal dimuat: ${key}`), { once: true });
+  frame.addEventListener("error", () => console.warn(`Adsterra gagal dimuat: ${item.label}`), { once: true });
 
-  const options = JSON.stringify({ key, format: "iframe", height, width, params: {} });
-  const safeSrc = String(src).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
-  frame.srcdoc = `<!doctype html>
-<html><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html,body{margin:0;padding:0;width:${width}px;height:${height}px;overflow:hidden;background:transparent}body{display:block}</style>
-</head><body>
-<script>var atOptions=${options};</script>
-<script data-cfasync="false" src="${safeSrc}"></script>
-</body></html>`;
-  slot.appendChild(frame);
+  if (item.type === "native") {
+    const width = Math.min(720, Math.max(260, window.innerWidth - 32));
+    const height = Math.min(180, Math.max(150, window.innerHeight - 80));
+    wrap.style.width = `${width}px`;
+    wrap.style.height = `${height}px`;
+    frame.width = String(width);
+    frame.height = String(height);
+    frame.style.width = `${width}px`;
+    frame.style.height = `${height}px`;
+    frame.src = "/adsterra/native.html";
+  } else {
+    const availableWidth = Math.max(180, window.innerWidth - 32);
+    const availableHeight = Math.max(140, window.innerHeight - 76);
+    const scale = Math.min(1, availableWidth / item.width, availableHeight / item.height);
+    const scaledWidth = Math.round(item.width * scale);
+    const scaledHeight = Math.round(item.height * scale);
+    wrap.style.width = `${scaledWidth}px`;
+    wrap.style.height = `${scaledHeight}px`;
+    frame.width = String(item.width);
+    frame.height = String(item.height);
+    frame.style.width = `${item.width}px`;
+    frame.style.height = `${item.height}px`;
+    frame.style.transform = `scale(${scale})`;
+    frame.style.transformOrigin = "top left";
+    const query = new URLSearchParams({ key: item.key, width: String(item.width), height: String(item.height) });
+    frame.src = `/adsterra/banner.html?${query.toString()}`;
+  }
+  wrap.appendChild(frame);
+  return wrap;
 }
-function loadNativeAd(slotId) {
-  const slot = $(slotId);
-  if (!slot || slot.dataset.loaded === "1") return;
-  slot.dataset.loaded = "1";
-  const frame = document.createElement("iframe");
-  frame.title = "Adsterra Native Banner";
-  frame.loading = "eager";
-  frame.referrerPolicy = "no-referrer-when-downgrade";
-  frame.setAttribute("scrolling", "no");
-  frame.style.cssText = "display:block;width:100%;height:180px;border:0;background:transparent;overflow:hidden";
-  frame.addEventListener("error", () => console.warn("Adsterra Native Banner gagal dimuat."), { once: true });
-  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;width:100%;min-height:180px;background:transparent;overflow:hidden}</style></head><body><div id="container-c4ddd55dc2405990669cdc39190e71f0"></div><script async fetchpriority="high" data-cfasync="false" src="https://biomanos.org/21/c4ddd55dc2405990669cdc39190e71f0"></script></body></html>`;
-  slot.appendChild(frame);
+
+function showTimedAd(item) {
+  const layer = $("timedAdLayer");
+  if (!layer || layer.querySelector(`[data-ad-id="${item.id}"]`)) return;
+
+  const panel = document.createElement("section");
+  panel.className = `timed-ad-panel ${item.motion}`;
+  panel.dataset.adId = item.id;
+  panel.setAttribute("role", "region");
+  panel.setAttribute("aria-label", item.label);
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "timed-ad-close";
+  close.setAttribute("aria-label", `Tutup ${item.label}`);
+  close.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+  close.addEventListener("click", () => panel.remove(), { once: true });
+
+  panel.appendChild(createTimedAdFrame(item));
+  panel.appendChild(close);
+  layer.appendChild(panel);
 }
+
+function runTimedAdWhenVisible(item) {
+  if (document.visibilityState === "visible") {
+    showTimedAd(item);
+    return;
+  }
+  const onVisible = () => {
+    if (document.visibilityState !== "visible") return;
+    document.removeEventListener("visibilitychange", onVisible);
+    showTimedAd(item);
+  };
+  document.addEventListener("visibilitychange", onVisible);
+}
+
+function startTimedAdPlacements() {
+  // Delays are all measured from the moment the video becomes available.
+  // They are independent one-shot timers, not a queue and not auto-refreshes.
+  TIMED_ADS.forEach(item => window.setTimeout(() => runTimedAdWhenVisible(item), item.delay));
+}
+
 function loadSocialBar() {
   if (document.querySelector('script[data-vidpas-socialbar]')) return;
   const s = document.createElement("script");
@@ -424,11 +463,9 @@ function loadSocialBar() {
   (document.head || document.body).appendChild(s);
 }
 
-// Load the popunder provider once at page start. The provider controls its own
-// genuine user-gesture rules; Vidpas does not synthesize clicks or force repeats.
+// Load the popunder provider once; Adsterra handles its own frequency and
+// genuine user-gesture rules. The page never fabricates clicks or popups.
 function setupPopunder() {
-  // Load the provider once per page view. Frequency and user-gesture limits
-  // remain controlled by Adsterra; Vidpas never fabricates clicks or popups.
   if (document.querySelector('script[data-vidpas-popunder]')) return;
   const script = document.createElement("script");
   script.setAttribute("data-cfasync", "false");
@@ -439,132 +476,12 @@ function setupPopunder() {
   (document.head || document.body).appendChild(script);
 }
 
-const AD_ENTRY_MOTIONS = ["ad-from-top", "ad-from-bottom", "ad-from-left", "ad-from-right", "ad-from-center"];
-
-// Rotating overlays use the exact Adsterra banner zones supplied by the publisher.
-// The delay is counted after the previous overlay is explicitly closed: 3s, 6s, 9s, 12s, and onward.
-const ROTATING_ADS = [
-  { delay: 3000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-center" },
-  { delay: 6000, type: "banner", key: "140b515f1a8f1857a38ab603f51b1f10", width: 320, height: 50, motion: "ad-from-bottom" },
-  { delay: 9000, type: "banner", key: "6e20a4c9dad189e23fe8642d6c242cfd", width: 468, height: 60, motion: "ad-from-top" },
-  { delay: 12000, type: "banner", key: "ada5f60c5cb37f253657ef96c895a721", width: 160, height: 300, motion: "ad-from-left" },
-  { delay: 15000, type: "banner", key: "1057b25ea9554d63c48eb6f8a07b782b", width: 160, height: 600, motion: "ad-from-right" },
-  { delay: 18000, type: "banner", key: "a0c724147631738be4791be58f8fbaed", width: 728, height: 90, motion: "ad-from-bottom" },
-  { delay: 21000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-top" },
-  { delay: 24000, type: "banner", key: "140b515f1a8f1857a38ab603f51b1f10", width: 320, height: 50, motion: "ad-from-center" },
-  { delay: 27000, type: "native", motion: "ad-from-left" }
-];
-let rotatingAdIndex = 0;
-let rotatingAdTimer = null;
-let rotatingAdOpen = false;
-
-function clearRotatingAdSlot() {
-  const slot = $("slideAdSlot");
-  const panel = $("videoSlideAd");
-  if (slot) {
-    slot.dataset.loaded = "";
-    slot.replaceChildren();
-    slot.className = "ad-slot";
-    slot.removeAttribute("style");
-  }
-  if (panel) {
-    panel.style.removeProperty("width");
-    panel.style.removeProperty("height");
-  }
-}
-function fitRotatingBanner(width, height) {
-  const panel = $("videoSlideAd");
-  const slot = $("slideAdSlot");
-  const frame = slot && slot.querySelector("iframe");
-  if (!panel || !slot || !frame) return;
-  const availableWidth = Math.max(240, window.innerWidth - 28);
-  const availableHeight = Math.max(180, window.innerHeight - 90);
-  const scale = Math.min(1, availableWidth / width, availableHeight / height);
-  const scaledWidth = Math.round(width * scale);
-  const scaledHeight = Math.round(height * scale);
-  panel.style.setProperty("width", `${scaledWidth}px`, "important");
-  panel.style.setProperty("height", `${scaledHeight}px`, "important");
-  slot.style.width = `${scaledWidth}px`;
-  slot.style.height = `${scaledHeight}px`;
-  slot.style.overflow = "hidden";
-  slot.style.flex = "none";
-  frame.style.width = `${width}px`;
-  frame.style.height = `${height}px`;
-  frame.style.maxWidth = "none";
-  frame.style.transform = `scale(${scale})`;
-  frame.style.transformOrigin = "top left";
-}
-function renderRotatingAd(item) {
-  const panel = $("videoSlideAd");
-  const slot = $("slideAdSlot");
-  if (!panel || !slot) return;
-  clearRotatingAdSlot();
-  panel.classList.remove("is-hiding", ...AD_ENTRY_MOTIONS);
-  panel.classList.toggle("ad-size-300", item.type === "banner" && item.width === 300);
-  panel.classList.toggle("ad-size-468", item.type === "banner" && item.width === 468);
-  panel.classList.toggle("ad-size-native", item.type === "native");
-  if (item.type === "native") {
-    loadNativeAd("slideAdSlot");
-    slot.style.width = "min(320px, calc(100vw - 28px))";
-    slot.style.height = "180px";
-    slot.style.overflow = "hidden";
-    panel.style.setProperty("width", "min(320px, calc(100vw - 28px))", "important");
-    panel.style.setProperty("height", "180px", "important");
-  } else {
-    loadAdsterraBanner("slideAdSlot", item.key, item.width, item.height, `https://biomanos.org/22/${item.key}`);
-    fitRotatingBanner(item.width, item.height);
-  }
-  panel.classList.add(item.motion);
-  panel.hidden = false;
-  rotatingAdOpen = true;
-}
-function scheduleNextRotatingAd() {
-  window.clearTimeout(rotatingAdTimer);
-  rotatingAdTimer = null;
-  if (rotatingAdOpen) return;
-  const next = ROTATING_ADS[rotatingAdIndex];
-  if (!next) return;
-  rotatingAdTimer = window.setTimeout(() => {
-    rotatingAdTimer = null;
-    if (rotatingAdOpen) return;
-    if (document.visibilityState !== "visible") {
-      scheduleNextRotatingAd();
-      return;
-    }
-    renderRotatingAd(next);
-  }, next.delay);
-}
-function startRotatingAdSequence() {
-  const panel = $("videoSlideAd");
-  const close = $("hideSlideAd");
-  if (!panel || !close || panel.dataset.started) return;
-  panel.dataset.started = "1";
-  close.addEventListener("click", () => {
-    // The creative stays visible until the visitor deliberately closes it.
-    if (!rotatingAdOpen) return;
-    rotatingAdOpen = false;
-    panel.hidden = true;
-    panel.classList.remove("is-hiding", ...AD_ENTRY_MOTIONS);
-    clearRotatingAdSlot();
-    rotatingAdIndex = (rotatingAdIndex + 1) % ROTATING_ADS.length;
-    scheduleNextRotatingAd();
-  });
-  // Re-fit the active creative if the Android device rotates or resizes.
-  window.addEventListener("resize", () => {
-    if (!rotatingAdOpen) return;
-    const item = ROTATING_ADS[rotatingAdIndex];
-    if (item && item.type === "banner") fitRotatingBanner(item.width, item.height);
-  }, { passive: true });
-  rotatingAdIndex = 0;
-  scheduleNextRotatingAd();
-}
-
 let unlockedAdServicesStarted = false;
 function startUnlockedAdServices() {
   if (unlockedAdServicesStarted) return;
   unlockedAdServicesStarted = true;
   loadSocialBar();
-  startRotatingAdSequence();
+  startTimedAdPlacements();
   setupCommunityNotice();
 }
 
@@ -653,9 +570,7 @@ function buildUnlockedPage(data) {
   root.innerHTML = `<section class="video-gate-shell">
     <header class="video-publisher-heading"><span>VIDEO VIDPAS</span></header>
     <section class="video-info"><div class="video-info-main"><h1>${esc(data.title)}</h1><p class="video-description">${esc(data.description || "Belum ada deskripsi untuk video ini.")}</p></div></section>
-    <div class="video-page-ad video-top-ad"><div class="ad-caption">Advertisement</div><div id="topBannerSlot" class="ad-slot ad-728x90"></div></div>
     <section class="video-stage-wrap" id="videoStage"><div class="video-player-loading"><span class="loading-spinner"></span></div></section>
-    <div class="video-page-ad video-mid-ad"><div class="ad-caption">Advertisement</div><div id="midBannerSlot" class="ad-slot ad-468x60"></div></div>
     <section class="video-info video-info-meta"><div class="video-info-main"><div class="video-metrics"><span><i class="fa-regular fa-eye"></i><b>${Number(data.views||0).toLocaleString("id-ID")}</b> views</span><span><i class="fa-solid fa-heart"></i><b id="likeCount">${Number(data.likes||0).toLocaleString("id-ID")}</b> likes</span><span><i class="fa-solid fa-calendar-days"></i>${data.created_at?new Date(data.created_at).toLocaleDateString("id-ID"):"Vidpas"}</span></div></div></section>
     <section class="video-actions-panel" id="videoActions"><div class="video-actions-row">
       <button class="video-action-btn like" id="likeBtn" type="button"><i class="fa-regular fa-heart"></i><span>Like</span><b id="likeButtonCount">${Number(data.likes||0).toLocaleString("id-ID")}</b></button>
@@ -663,15 +578,11 @@ function buildUnlockedPage(data) {
       <button class="video-action-btn" id="shareBtn" type="button"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
     </div><p class="actions-hint" id="downloadHint">${data.download_url ? "Video sudah terbuka. Kamu bisa menonton dan mengunduh." : "Publisher belum menyediakan tautan download."}</p></section>
     <div class="video-social-shortcuts">${tasks.map(t=>{const p=platforms[String(t.type||"").toLowerCase()]||{name:"Platform",icon:"fa-solid fa-arrow-up-right-from-square",tone:"generic"};return `<a class="video-social-button ${p.tone}" href="${esc(platformAppHref(t.type,t.url))}" target="_blank" rel="noopener noreferrer" aria-label="${esc(p.name)}"><i class="${p.icon}"></i><span>${esc(p.name)}</span></a>`;}).join("")}</div>
-    <div class="video-page-ad video-unlock-ad"><div class="ad-caption">Advertisement</div><div id="unlockBannerSlot" class="ad-slot ad-300x250"></div></div>
   </section>`;
   const related = $("relatedSection");
   if (related) related.hidden = false;
   renderPlayer(data);
   setupActionButtons(data);
-  queueAd(() => loadAdsterraBanner("topBannerSlot","a0c724147631738be4791be58f8fbaed",728,90,"https://biomanos.org/22/a0c724147631738be4791be58f8fbaed"));
-  queueAd(() => loadAdsterraBanner("midBannerSlot","6e20a4c9dad189e23fe8642d6c242cfd",468,60,"https://biomanos.org/22/6e20a4c9dad189e23fe8642d6c242cfd"));
-  queueAd(() => loadAdsterraBanner("unlockBannerSlot","100bd0c6cfd6cedb608b2e083620df0e",300,250,"https://biomanos.org/22/100bd0c6cfd6cedb608b2e083620df0e"));
   startUnlockedAdServices();
   renderRelated();
 }
