@@ -366,39 +366,53 @@ function renderRelated() {
 function queueAd(callback) {
   adBannerQueue = adBannerQueue.then(() => new Promise(resolve => {
     callback();
-    setTimeout(resolve, 5000);
+    setTimeout(resolve, 3000);
   })).catch(error => console.warn("Ad queue:", error));
   return adBannerQueue;
 }
 function loadAdsterraBanner(slotId,key,width,height,src) {
   const slot = $(slotId);
-  if (!slot || slot.dataset.loaded) return;
+  if (!slot || slot.dataset.loaded === "1") return;
   slot.dataset.loaded = "1";
+
+  // Separate iframe per placement prevents atOptions collisions between sizes.
   const frame = document.createElement("iframe");
-  frame.title = "Iklan";
+  frame.title = `Advertisement ${width}x${height}`;
   frame.width = String(width);
   frame.height = String(height);
   frame.loading = "eager";
-  frame.referrerPolicy = "strict-origin-when-cross-origin";
-  frame.setAttribute("allow","autoplay; fullscreen; clipboard-write");
+  frame.referrerPolicy = "no-referrer-when-downgrade";
+  frame.setAttribute("allow", "autoplay; fullscreen");
+  frame.setAttribute("scrolling", "no");
   frame.style.cssText = `display:block;border:0;max-width:100%;width:${width}px;height:${height}px;background:transparent;overflow:hidden`;
-  const code = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;width:${width}px;height:${height}px;overflow:hidden;background:transparent}</style></head><body><script>var atOptions=${JSON.stringify({key,format:"iframe",height,width,params:{}})};</script><script data-cfasync="false" src="${src}"></script></body></html>`;
-  frame.srcdoc = code;
+  frame.addEventListener("error", () => console.warn(`Adsterra banner gagal dimuat: ${key}`), { once: true });
+
+  const options = JSON.stringify({ key, format: "iframe", height, width, params: {} });
+  const safeSrc = String(src).replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  frame.srcdoc = `<!doctype html>
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;padding:0;width:${width}px;height:${height}px;overflow:hidden;background:transparent}body{display:block}</style>
+</head><body>
+<script>var atOptions=${options};</script>
+<script data-cfasync="false" src="${safeSrc}"></script>
+</body></html>`;
   slot.appendChild(frame);
 }
 function loadNativeAd(slotId) {
   const slot = $(slotId);
-  if (!slot || slot.dataset.loaded) return;
+  if (!slot || slot.dataset.loaded === "1") return;
   slot.dataset.loaded = "1";
   const frame = document.createElement("iframe");
-  frame.title = "Iklan";
+  frame.title = "Adsterra Native Banner";
   frame.loading = "eager";
-  frame.referrerPolicy = "strict-origin-when-cross-origin";
-  frame.style.cssText = "display:block;width:min(100%,720px);height:180px;border:0;background:transparent;overflow:hidden";
-  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;background:transparent;overflow:hidden}</style></head><body><div id="container-c4ddd55dc2405990669cdc39190e71f0"></div><script async fetchpriority="high" data-cfasync="false" src="https://biomanos.org/21/c4ddd55dc2405990669cdc39190e71f0"></script></body></html>`;
+  frame.referrerPolicy = "no-referrer-when-downgrade";
+  frame.setAttribute("scrolling", "no");
+  frame.style.cssText = "display:block;width:100%;height:180px;border:0;background:transparent;overflow:hidden";
+  frame.addEventListener("error", () => console.warn("Adsterra Native Banner gagal dimuat."), { once: true });
+  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0;width:100%;min-height:180px;background:transparent;overflow:hidden}</style></head><body><div id="container-c4ddd55dc2405990669cdc39190e71f0"></div><script async fetchpriority="high" data-cfasync="false" src="https://biomanos.org/21/c4ddd55dc2405990669cdc39190e71f0"></script></body></html>`;
   slot.appendChild(frame);
 }
-
 function loadSocialBar() {
   if (document.querySelector('script[data-vidpas-socialbar]')) return;
   const s = document.createElement("script");
@@ -428,17 +442,17 @@ function setupPopunder() {
 const AD_ENTRY_MOTIONS = ["ad-from-top", "ad-from-bottom", "ad-from-left", "ad-from-right", "ad-from-center"];
 
 // Rotating overlays use the exact Adsterra banner zones supplied by the publisher.
-// The delay is counted after the previous overlay is explicitly closed.
+// The delay is counted after the previous overlay is explicitly closed: 3s, 6s, 9s, 12s, and onward.
 const ROTATING_ADS = [
-  { delay: 5000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-center" },
-  { delay: 10000, type: "banner", key: "140b515f1a8f1857a38ab603f51b1f10", width: 320, height: 50, motion: "ad-from-bottom" },
-  { delay: 10000, type: "banner", key: "6e20a4c9dad189e23fe8642d6c242cfd", width: 468, height: 60, motion: "ad-from-top" },
-  { delay: 15000, type: "banner", key: "ada5f60c5cb37f253657ef96c895a721", width: 160, height: 300, motion: "ad-from-left" },
+  { delay: 3000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-center" },
+  { delay: 6000, type: "banner", key: "140b515f1a8f1857a38ab603f51b1f10", width: 320, height: 50, motion: "ad-from-bottom" },
+  { delay: 9000, type: "banner", key: "6e20a4c9dad189e23fe8642d6c242cfd", width: 468, height: 60, motion: "ad-from-top" },
+  { delay: 12000, type: "banner", key: "ada5f60c5cb37f253657ef96c895a721", width: 160, height: 300, motion: "ad-from-left" },
   { delay: 15000, type: "banner", key: "1057b25ea9554d63c48eb6f8a07b782b", width: 160, height: 600, motion: "ad-from-right" },
-  { delay: 20000, type: "banner", key: "a0c724147631738be4791be58f8fbaed", width: 728, height: 90, motion: "ad-from-bottom" },
-  { delay: 10000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-top" },
-  { delay: 10000, type: "banner", key: "140b515f1a8f1857a38ab603f51b1f10", width: 320, height: 50, motion: "ad-from-center" },
-  { delay: 15000, type: "native", motion: "ad-from-left" }
+  { delay: 18000, type: "banner", key: "a0c724147631738be4791be58f8fbaed", width: 728, height: 90, motion: "ad-from-bottom" },
+  { delay: 21000, type: "banner", key: "100bd0c6cfd6cedb608b2e083620df0e", width: 300, height: 250, motion: "ad-from-top" },
+  { delay: 24000, type: "banner", key: "140b515f1a8f1857a38ab603f51b1f10", width: 320, height: 50, motion: "ad-from-center" },
+  { delay: 27000, type: "native", motion: "ad-from-left" }
 ];
 let rotatingAdIndex = 0;
 let rotatingAdTimer = null;
